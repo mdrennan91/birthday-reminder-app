@@ -11,6 +11,10 @@ A web app to track important birthdays and send customizable notifications, buil
 > “We’re only here for just a moment in the light, One day it shines for us the next we’re in the night”
 > - Starlight by Starset
 
+
+- Larry:  
+> “You can't cheat the mountain.”  
+> — Trevor Hubbs
 ---
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
