@@ -20,7 +20,7 @@ export const authOptions: NextAuthOptions = {
 
         console.log("🧠 authorize() found user:", user);
 
-        if (user && await compare(credentials!.password, user.password)) {
+        if (user && credentials?.password && await compare(credentials.password, user.password)) {
           return {
             id: user._id.toString(),
             email: user.email,
