@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     return new NextResponse("User already exists", { status: 409 });
   }
 
-  const hashed = await hash(password, 10);
+  const hashed = await hash(password, 12);
   await db.collection("users").insertOne({ email, username, password: hashed });
 
   return new NextResponse("User created", { status: 201 });
