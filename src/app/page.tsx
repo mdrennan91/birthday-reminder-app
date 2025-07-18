@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 export default async function Home() {
   const session = await getServerSession(authOptions);
 
-  console.log("👤 session.user:", session?.user);
+// Removed the console.log statement to avoid logging sensitive session data.
 
   async function handleSignOut() {
     "use server";
