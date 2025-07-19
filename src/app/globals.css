@@ -1,15 +1,12 @@
 @import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Cabin:ital,wght@0,400..700;1,400..700&family=Host+Grotesk&display=swap");
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-cabin: "Cabin", sans-serif;
+  /* https://coolors.co/e5e1ee-dffdff-90bede */
+  --lavender-web: #e5e1eeff;
+  --light-cyan: #dffdffff;
+  --powder-blue: #90bedeff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,5 +19,5 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-cabin);
 }
