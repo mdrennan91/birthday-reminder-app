@@ -1,3 +1,4 @@
+// src/lib/authOptions.ts
 import { MongoDBAdapter } from "@next-auth/mongodb-adapter";
 import clientPromise from "./mongodb";
 import CredentialsProvider from "next-auth/providers/credentials";
@@ -17,8 +18,6 @@ export const authOptions: NextAuthOptions = {
         const client = await clientPromise;
         const db = client.db();
         const user = await db.collection("users").findOne({ email: credentials?.email });
-
-        console.log("🧠 authorize() found user:", user);
 
         if (user && credentials?.password && await compare(credentials.password, user.password)) {
           return {
