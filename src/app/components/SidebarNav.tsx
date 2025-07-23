@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Plus, Pencil } from "lucide-react";
 import CategoryModal from "@/app/components/CategoryModal";
 import EditDeleteDialog from "@/app/components/EditDeleteDialog";
+import { useSession } from "next-auth/react";
 
 // Constant for the custom event name
 const CATEGORY_FILTER_EVENT = "filter-category";
@@ -23,11 +24,17 @@ export default function Sidebar() {
   const [selectedCategory, setSelectedCategory] = useState<CategoryType | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const { status } = useSession();
 
 
   useEffect(() => {
-    fetchCategories();
-  }, []);
+    if (status === "authenticated") {
+      fetchCategories(); // reuse your helper that includes setLoading(false)
+    } else if (status === "unauthenticated") {
+      setLoading(false); // ensure we stop showing "Loading..." if not logged in
+    }
+  }, [status]);
+
 
   // Fetch user categories from API
   const fetchCategories = async () => {
@@ -104,6 +111,9 @@ export default function Sidebar() {
   if (loading) {
     return <aside className="w-64 p-4 border-r border-teal bg-lavender">Loading...</aside>;
   }
+    if (status === "unauthenticated") {
+    return null; // Don’t show anything if not logged in
+  }
 
 return (
     <aside className="w-64 p-4 border-r border-teal bg-lavender flex flex-col h-screen">
@@ -152,7 +162,7 @@ return (
         </ul>
       </div>
 
-      {/* Sticky "Show All" button at bottom */}
+      {/* Sticky "Clear Filters" button at bottom */}
       <div className="sticky bottom-0 bg-lavender pt-3 pb-4 mt-2 border-t border-gray-300">
         <button
           className={`w-full text-left py-1 px-2 rounded font-medium ${
@@ -166,7 +176,7 @@ return (
             window.dispatchEvent(event);
           }}
         >
-          Show All
+          Clear Filters
         </button>
       </div>
 

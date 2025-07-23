@@ -6,6 +6,8 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import isToday from "dayjs/plugin/isToday";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
+import { useSession } from "next-auth/react";
+
 
 // Extend dayjs with plugins
 dayjs.extend(relativeTime);
@@ -34,8 +36,11 @@ export default function MainContent() {
   const [displayCount, setDisplayCount] = useState(4);
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const { status } = useSession();
 
   useEffect(() => {
+    if (status !== "authenticated") return; // Exit early if not logged in
+    
     const fetchBirthdays = async () => {
       try {
         const response = await fetch("/api/birthdays");
@@ -57,7 +62,7 @@ export default function MainContent() {
         console.error("Error loading birthdays:", error);
       }
     };
-    fetchBirthdays();
+    fetchBirthdays(); 
 
     const handleCategoryFilter = (e: CustomEvent) => {
       setActiveCategory(e.detail);
@@ -67,8 +72,8 @@ export default function MainContent() {
     return () => {
       window.removeEventListener(CATEGORY_FILTER_EVENT, handleCategoryFilter as EventListener);
     };
-  }, []);
-
+  }, [status]);
+  
   const today = dayjs();
 
   const pinnedPeople = useMemo(() => {
@@ -124,8 +129,12 @@ export default function MainContent() {
 
   const orderedMonths = Object.keys(grouped).sort(
   (a, b) => monthOrder[a as keyof typeof monthOrder] - monthOrder[b as keyof typeof monthOrder]
-);
+  );
 
+  if (status === "unauthenticated") {
+    return null; // Don’t show anything if not logged in
+  }
+  
 
   return (
     <main className="flex flex-1 overflow-hidden">
