@@ -116,7 +116,7 @@ export default function Sidebar() {
   }
 
 return (
-    <aside className="w-64 p-4 border-r border-teal bg-lavender flex flex-col h-screen">
+    <aside className="w-64 p-4 border-r border-teal bg-lavender flex flex-col ">
       {/* Header controls */}
       <div className="flex justify-between items-center mb-4">
         <div></div>
