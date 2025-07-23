@@ -33,7 +33,7 @@ export default function SignUpPage() {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder="Email"
-        className="w-full p-2 border mb-2"
+        className="w-full text-black p-2 border mb-2"
         required
       />
       <input
@@ -41,7 +41,7 @@ export default function SignUpPage() {
         value={username}
         onChange={(e) => setUsername(e.target.value)}
         placeholder="Username"
-        className="w-full p-2 border mb-2"
+        className="w-full text-black p-2 border mb-2"
         required
       />
       <input
@@ -49,7 +49,7 @@ export default function SignUpPage() {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder="Password"
-        className="w-full p-2 border mb-4"
+        className="w-full text-black p-2 border mb-4"
         required
       />
       <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded">

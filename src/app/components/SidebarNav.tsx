@@ -118,7 +118,7 @@ export default function Sidebar() {
           <li key={cat._id}>
             <button
               style={{ color: cat.color }}
-              className="w-full text-left py-1 px-2 rounded bg-lavender font-medium hover:bg-teal/10"
+              className="w-full text-left py-1 px-2 rounded bg-lavender font-medium hover:bg-teal/25"
             >
               {cat.name}
             </button>

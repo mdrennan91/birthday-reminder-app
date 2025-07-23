@@ -33,7 +33,7 @@ export default function LoginPage() {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder="Email"
-        className="w-full p-2 border mb-2"
+        className="w-full text-black p-2 border mb-2"
         required
       />
       <input
@@ -41,7 +41,7 @@ export default function LoginPage() {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder="Password"
-        className="w-full p-2 border mb-4"
+        className="w-full text-black p-2 border mb-4"
         required
       />
       <button type="submit" className="w-full bg-green-600 text-white p-2 rounded">
@@ -50,7 +50,7 @@ export default function LoginPage() {
 
       <p className="mt-4 text-sm text-center">
         Don&apos;t have an account?{" "}
-        <a href="/signup" className="text-blue-400 hover:underline">
+        <a href="/signup" className="text-blue-800 hover:underline">
           Sign up here
         </a>
       </p>
