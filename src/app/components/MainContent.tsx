@@ -43,12 +43,12 @@ export default function MainContent() {
         const rawData = await response.json();
 
         // Normalize category field to always be an array
-        const normalized = rawData.map((person: any) => ({
+        const normalized = rawData.map((person: Partial<Person>) => ({
           ...person,
-          category: Array.isArray(person.category)
-            ? person.category
-            : typeof person.category === "string"
-            ? [person.category]
+          categories: Array.isArray(person.categories)
+            ? person.categories
+            : typeof person.categories === "string"
+            ? [person.categories]
             : [],
         }));
         
@@ -214,7 +214,7 @@ export default function MainContent() {
                 <button className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600">Delete</button>
               </div>
             </div>
-            <img
+            <Image
               src={selectedPerson.avatarUrl}
               alt={selectedPerson.name}
               className="w-24 h-24 rounded-full mb-4 border border-teal"
