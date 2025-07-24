@@ -1,11 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import type { Person } from "../../../types"; 
+
 
 export default function AddBirthdayForm({
   onClose,
   refreshPeople,
+  personToEdit,
 }: {
   onClose: () => void;
   refreshPeople: () => Promise<void>;
+  personToEdit?: Person | null;
 }) {
   const [formData, setFormData] = useState({
     name: "",
@@ -18,6 +22,23 @@ export default function AddBirthdayForm({
     notes: "",
     avatarUrl: "",
   });
+
+  useEffect(() => {
+    if (personToEdit) {
+      const birthday = new Date(personToEdit.birthday);
+      setFormData({
+        name: personToEdit.name || "",
+        day: birthday.getDate().toString(),
+        month: (birthday.getMonth() + 1).toString(),
+        year: birthday.getFullYear().toString(),
+        phone: personToEdit.phone || "",
+        email: personToEdit.email || "",
+        address: personToEdit.address || "",
+        notes: personToEdit.notes || "",
+        avatarUrl: personToEdit.avatarUrl || "",
+      });
+    }
+  }, [personToEdit]);
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
@@ -50,20 +71,27 @@ export default function AddBirthdayForm({
     const paddedDay = formData.day.padStart(2, "0");
     const birthday = `${year}-${paddedMonth}-${paddedDay}`;
 
+    const payload = {
+      ...formData,
+      birthday,
+    };
+
     try {
-      const res = await fetch("/api/birthdays", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          birthday,
-        }),
-      });
+      const res = await fetch(
+        personToEdit
+          ? `/api/birthdays/${personToEdit._id}`
+          : "/api/birthdays",
+        {
+          method: personToEdit ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
 
       if (!res.ok) throw new Error("Failed to save birthday");
 
-      await refreshPeople(); // reload list
-      onClose(); // close modal
+      await refreshPeople();
+      onClose();
     } catch (err) {
       console.error("Error submitting form:", err);
     }
@@ -71,7 +99,9 @@ export default function AddBirthdayForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <h2 className="text-xl font-bold mb-4">Add Birthday</h2>
+      <h2 className="text-xl font-bold mb-4">
+        {personToEdit ? "Edit Birthday" : "Add Birthday"}
+      </h2>
 
       <div className="grid grid-cols-2 gap-4">
         <div>

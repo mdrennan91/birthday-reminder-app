@@ -119,6 +119,30 @@ export default function MainContent() {
 
   const combinedList = [...pinnedPeople, ...upcoming];
 
+  const handleDelete = async () => {
+    if (!selectedPerson) return;
+
+    const confirmed = confirm(`Are you sure you want to delete ${selectedPerson.name}?`);
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/birthdays/${selectedPerson._id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to delete birthday");
+      }
+
+      await fetchBirthdays();         // Refresh the list
+      setSelectedPerson(null);       // Deselect the person
+    } catch (err) {
+      console.error("Error deleting birthday:", err);
+      alert("Failed to delete birthday.");
+    }
+  };
+
+
   const grouped = combinedList.reduce((acc, person) => {
     const month = person.birthdayThisYear.format("MMMM");
     if (!acc[month]) acc[month] = [];
@@ -239,8 +263,20 @@ export default function MainContent() {
             <div className="flex justify-between items-start mb-4">
               <h2 className="text-xl font-bold">{selectedPerson.name}</h2>
               <div className="space-x-2">
-                <button className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">Edit</button>
-                <button className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600">Delete</button>
+                <button
+                  onClick={() => {
+                    setShowAddForm(true);
+                  }}
+                  className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
+                >
+                  Delete
+                </button>
               </div>
             </div>
             {selectedPerson.avatarUrl ? (
@@ -272,8 +308,12 @@ export default function MainContent() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded shadow-lg max-w-lg w-full">
             <AddBirthdayForm
-              onClose={() => setShowAddForm(false)}
-              refreshPeople={() => fetchBirthdays()} 
+              onClose={() => {
+                setShowAddForm(false);
+                setSelectedPerson(null); // optional: clear selected person after editing
+              }}
+              refreshPeople={fetchBirthdays}
+              personToEdit={selectedPerson} // pass the selected person
             />
           </div>
         </div>
