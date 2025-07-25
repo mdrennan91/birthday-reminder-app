@@ -184,7 +184,7 @@ export default function MainContent() {
         {/* Add Birthday Button */}
         <button
           onClick={() => setShowAddForm(true)}
-          className="mb-4 px-4 py-2 bg-teal text-white rounded hover:bg-teal-dark"
+          className="mb-4 px-4 py-2 bg-teal text-white rounded hover:bg-teal/40"
         >
           + Add Birthday
         </button>
@@ -209,7 +209,7 @@ export default function MainContent() {
                 return (
                   <li
                     key={person._id}
-                    className="border border-teal rounded p-4 flex items-center justify-between cursor-pointer hover:bg-teal/5"
+                    className="border border-teal rounded p-4 flex items-center justify-between cursor-pointer hover:bg-teal/50"
                     onClick={() => setSelectedPerson(person)}
                   >
                     <div className="flex items-center gap-3">
@@ -244,7 +244,7 @@ export default function MainContent() {
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="text-teal font-semibold">{person.birthdayThisYear.format("MMM D")}</div>
+                      <div className="text-teal/90 font-extrabold">{person.birthdayThisYear.format("MMM D")}</div>
                     </div>
                     <div className="text-right text-sm text-gray-700">
                       {daysLabel}

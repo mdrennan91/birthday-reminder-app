@@ -9,13 +9,7 @@
   --light-cyan: #dffdffff;
   --powder-blue: #90bedeff;
   --font-sans: 'Cabin', sans-serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: var(--powder-blue);
-    /* --foreground: var(--light-cyan); */
-  }
+  --background: var(--powder-blue);
 }
 
 body {

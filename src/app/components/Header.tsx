@@ -6,13 +6,13 @@ export default function Header() {
   const { data: session } = useSession();
 
   return (
-    <header className="w-full flex justify-between items-center bg-lavender border-b border-teal px-6 py-4 shadow-sm">
+    <header className="w-full flex justify-between items-center bg-lavender border-b px-6 py-4 shadow-sm">
       {/* Logo + Title */}
       <div className="flex items-center gap-2">
         <div className="w-10 h-10 bg-teal rounded-full flex items-center justify-center text-white font-bold">
           L
         </div>
-        <h1 className="text-xl font-semibold text-teal">Birthday Reminder</h1>
+        <h1 className="text-xl font-bold text-teal">Birthday Reminder</h1>
       </div>
 
       {/* User Greeting and Auth Buttons */}
