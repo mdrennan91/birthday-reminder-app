@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Image from "next/image";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import isToday from "dayjs/plugin/isToday";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import { useSession } from "next-auth/react";
+import AddBirthdayForm from "./AddBirthdayForm";
 
 
 // Extend dayjs with plugins
@@ -36,33 +37,35 @@ export default function MainContent() {
   const [displayCount, setDisplayCount] = useState(4);
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false); 
   const { status } = useSession();
 
-  useEffect(() => {
-    if (status !== "authenticated") return; // Exit early if not logged in
-    
-    const fetchBirthdays = async () => {
-      try {
-        const response = await fetch("/api/birthdays");
-        if (!response.ok) throw new Error("Failed to load birthdays");
-        const rawData = await response.json();
+  const fetchBirthdays = useCallback(async () => {
+    if (status !== "authenticated") return;
+    try {
+      const response = await fetch("/api/birthdays");
+      if (!response.ok) throw new Error("Failed to load birthdays");
 
-        // Normalize category field to always be an array
-        const normalized = rawData.map((person: Partial<Person>) => ({
-          ...person,
-          categories: Array.isArray(person.categories)
-            ? person.categories
-            : typeof person.categories === "string"
-            ? [person.categories]
-            : [],
-        }));
-        
-        setPeople(normalized);
-      } catch (error) {
-        console.error("Error loading birthdays:", error);
-      }
-    };
-    fetchBirthdays(); 
+      const rawData = await response.json();
+      const normalized = rawData.map((person: Partial<Person>) => ({
+        ...person,
+        categories: Array.isArray(person.categories)
+          ? person.categories
+          : typeof person.categories === "string"
+          ? [person.categories]
+          : [],
+      }));
+
+      setPeople(normalized);
+    } catch (error) {
+      console.error("Error loading birthdays:", error);
+    }
+  }, [status]);
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      fetchBirthdays();
+    }
 
     const handleCategoryFilter = (e: CustomEvent) => {
       setActiveCategory(e.detail);
@@ -72,7 +75,9 @@ export default function MainContent() {
     return () => {
       window.removeEventListener(CATEGORY_FILTER_EVENT, handleCategoryFilter as EventListener);
     };
-  }, [status]);
+  }, [status, fetchBirthdays]);
+
+
   
   const today = dayjs();
 
@@ -114,6 +119,30 @@ export default function MainContent() {
 
   const combinedList = [...pinnedPeople, ...upcoming];
 
+  const handleDelete = async () => {
+    if (!selectedPerson) return;
+
+    const confirmed = confirm(`Are you sure you want to delete ${selectedPerson.name}?`);
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/birthdays/${selectedPerson._id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to delete birthday");
+      }
+
+      await fetchBirthdays();         // Refresh the list
+      setSelectedPerson(null);       // Deselect the person
+    } catch (err) {
+      console.error("Error deleting birthday:", err);
+      alert("Failed to delete birthday.");
+    }
+  };
+
+
   const grouped = combinedList.reduce((acc, person) => {
     const month = person.birthdayThisYear.format("MMMM");
     if (!acc[month]) acc[month] = [];
@@ -152,6 +181,15 @@ export default function MainContent() {
           </select>
         </div>
 
+        {/* Add Birthday Button */}
+        <button
+          onClick={() => setShowAddForm(true)}
+          className="mb-4 px-4 py-2 bg-teal text-white rounded hover:bg-teal-dark"
+        >
+          + Add Birthday
+        </button>
+
+
           {/*  Show empty state if no results */}
           {orderedMonths.length === 0 && (
             <div className="text-center text-gray-600 mt-10">
@@ -187,13 +225,19 @@ export default function MainContent() {
                           );
                         }}
                       />
-                      <Image
-                        src={person.avatarUrl}
-                        alt={person.name}
-                        width={40}
-                        height={40}
-                        className="rounded-full border border-teal"
-                      />
+                      {person.avatarUrl ? (
+                        <Image
+                          src={person.avatarUrl}
+                          alt={person.name}
+                          width={80}
+                          height={80}
+                          className="rounded-full"
+                        />
+                      ) : (
+                        <div className="w-[80px] h-[80px] rounded-full bg-gray-700 text-white flex items-center justify-center">
+                          N/A
+                        </div>
+                      )}
                       <div className="text-left">
                         <div className="font-semibold">{person.name}</div>
                         <div className="text-sm text-gray-600">Age: {age}</div>
@@ -219,17 +263,37 @@ export default function MainContent() {
             <div className="flex justify-between items-start mb-4">
               <h2 className="text-xl font-bold">{selectedPerson.name}</h2>
               <div className="space-x-2">
-                <button className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">Edit</button>
-                <button className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600">Delete</button>
+                <button
+                  onClick={() => {
+                    setShowAddForm(true);
+                  }}
+                  className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
+                >
+                  Delete
+                </button>
               </div>
             </div>
-            <Image
-              src={selectedPerson.avatarUrl}
-              alt={selectedPerson.name}
-              className="w-24 h-24 rounded-full mb-4 border border-teal"
-            />
+            {selectedPerson.avatarUrl ? (
+              <Image
+                src={selectedPerson.avatarUrl}
+                alt={selectedPerson.name}
+                width={96}
+                height={96}
+                className="w-24 h-24 rounded-full mb-4 border border-teal"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full mb-4 border border-teal bg-gray-700 text-white flex items-center justify-center">
+                N/A
+              </div>
+            )}
             <div className="text-gray-700 space-y-2">
-              <p><strong>Birthday:</strong> {selectedPerson.birthday}</p>
+              <p><strong>Birthday:</strong> {dayjs(selectedPerson.birthday).format("MM-DD-YYYY")}</p>
               <p><strong>Phone:</strong> {selectedPerson.phone}</p>
               <p><strong>Email:</strong> {selectedPerson.email}</p>
               <p><strong>Address:</strong> {selectedPerson.address}</p>
@@ -240,6 +304,20 @@ export default function MainContent() {
           <p className="text-gray-600">Select a person to view their details.</p>
         )}
       </section>
+      {showAddForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded shadow-lg max-w-lg w-full">
+            <AddBirthdayForm
+              onClose={() => {
+                setShowAddForm(false);
+                setSelectedPerson(null); // optional: clear selected person after editing
+              }}
+              refreshPeople={fetchBirthdays}
+              personToEdit={selectedPerson} // pass the selected person
+            />
+          </div>
+        </div>
+      )}
     </main>
   );
 }
