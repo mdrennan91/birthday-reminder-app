@@ -4,7 +4,7 @@ module.exports = {
     "./src/app/**/*.{js,ts,jsx,tsx}",
     "./src/pages/**/*.{js,ts,jsx,tsx}",     
     "./src/components/**/*.{js,ts,jsx,tsx}",
-    "./src/app/globals.css "
+    "./src/app/globals.css"
   ],
   theme: {
     extend: {
@@ -14,7 +14,7 @@ module.exports = {
         teal: "#90bede",
       },
       fontFamily: {
-        sans: ["Cabin", "sans-serif"],
+        sans: ["var(--font-sans)", "sans-serif"]
       },
     },
   },

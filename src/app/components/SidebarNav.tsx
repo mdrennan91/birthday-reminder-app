@@ -24,6 +24,7 @@ export default function Sidebar() {
   const [selectedCategory, setSelectedCategory] = useState<CategoryType | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [filtersActive, setFiltersActive] = useState(false);
   const { status } = useSession();
 
 
@@ -34,6 +35,14 @@ export default function Sidebar() {
       setLoading(false); // ensure we stop showing "Loading..." if not logged in
     }
   }, [status]);
+
+  useEffect(() => {
+  if (activeCategory === null) {
+    setFiltersActive(false);
+  } else {
+    setFiltersActive(true);
+  }
+}, [activeCategory]);
 
 
   // Fetch user categories from API
@@ -119,7 +128,7 @@ return (
     <aside className="w-64 p-4 border-r border-teal bg-lavender flex flex-col ">
       {/* Header controls */}
       <div className="flex justify-between items-center mb-4">
-        <div></div>
+        <div className="font-extrabold text-xl">Categories</div>
         <div className="flex gap-2">
           <button
             onClick={openAddModal}
@@ -146,13 +155,14 @@ return (
                 className={`w-full text-left py-1 px-2 rounded font-medium ${
                   activeCategory === cat.name.toLowerCase()
                     ? "bg-teal/20 border-l-4 border-teal"
-                    : "bg-lavender hover:bg-teal/10"
+                    : "bg-lavender hover:bg-teal/50"
                 }`}
                 onClick={() => {
                   const event = new CustomEvent(CATEGORY_FILTER_EVENT, {
                     detail: cat.name.toLowerCase(),
                   });
                   window.dispatchEvent(event);
+                  setFiltersActive(true);
                 }}
               >
                 {cat.name}
@@ -166,12 +176,13 @@ return (
       <div className="sticky bottom-0 bg-lavender pt-3 pb-4 mt-2 border-t border-gray-300">
         <button
           className={`w-full text-left py-1 px-2 rounded font-medium ${
-            activeCategory === null
-              ? "bg-teal/20 border-l-4 border-teal"
-              : "bg-lavender hover:bg-teal/10"
+            filtersActive
+            ? "bg-lavender hover:bg-teal/50"
+            : "bg-teal/20 border-l-4 border-teal"
           }`}
           onClick={() => {
             setActiveCategory(null);
+            setFiltersActive(false);
             const event = new CustomEvent(CATEGORY_FILTER_EVENT, { detail: null });
             window.dispatchEvent(event);
           }}
@@ -180,7 +191,7 @@ return (
         </button>
       </div>
 
-
+      
 
       {/* Modals */}
       <CategoryModal

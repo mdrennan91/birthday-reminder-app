@@ -25,8 +25,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${cabin.variable} font-sans bg-[var(--background)] text-[var(--foreground)]`}>
+    <html lang="en" className={`${cabin.variable}`}>
+      <body className={`font-sans bg-[var(--background)] text-[var(--foreground)]`}>
         <Providers>
           <div className="flex flex-col min-h-screen">
             <Header />
