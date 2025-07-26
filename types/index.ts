@@ -1,3 +1,5 @@
+import dayjs from "dayjs";
+
 export type Person = {
   _id: string;
   name: string;
@@ -8,4 +10,9 @@ export type Person = {
   notes?: string;
   avatarUrl?: string;
   categories?: string[];
+};
+
+
+export type PersonWithBirthday = Person & {
+  birthdayThisYear: dayjs.Dayjs;
 };

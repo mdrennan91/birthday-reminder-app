@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import type { Person } from "../../../types"; 
+import type { Person } from "@/types"; 
 
 
 export default function AddBirthdayForm({
