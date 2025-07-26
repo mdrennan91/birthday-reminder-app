@@ -39,6 +39,7 @@ export default function MainContent() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false); 
   const { status } = useSession();
+  const [isEditing, setIsEditing] = useState(false);
 
   const fetchBirthdays = useCallback(async () => {
     if (status !== "authenticated") return;
@@ -183,7 +184,11 @@ export default function MainContent() {
 
         {/* Add Birthday Button */}
         <button
-          onClick={() => setShowAddForm(true)}
+          onClick={() => {
+            setIsEditing(false);
+            setSelectedPerson(null);
+            setShowAddForm(true);
+          }}
           className="mb-4 px-4 py-2 bg-teal text-white rounded hover:bg-teal/40"
         >
           + Add Birthday
@@ -265,6 +270,7 @@ export default function MainContent() {
               <div className="space-x-2">
                 <button
                   onClick={() => {
+                    setIsEditing(true);
                     setShowAddForm(true);
                   }}
                   className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
@@ -310,10 +316,10 @@ export default function MainContent() {
             <AddBirthdayForm
               onClose={() => {
                 setShowAddForm(false);
-                setSelectedPerson(null); // optional: clear selected person after editing
+                setIsEditing(false);
               }}
               refreshPeople={fetchBirthdays}
-              personToEdit={selectedPerson} // pass the selected person
+              personToEdit={isEditing ? selectedPerson : null}
             />
           </div>
         </div>
