@@ -8,6 +8,27 @@ export default function SignUpPage() {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [emailError, setEmailError] = useState("");
+
+  function isValidEmail(email: string) {
+    // Simple email regex for server-side validation
+    const attempt = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(
+      email
+    );
+    const emailInput = document.getElementById("email");
+    if (!attempt) {
+      if (emailInput) {
+        (emailInput as HTMLInputElement).style.border = "3px solid red";
+      }
+      setEmailError("Please enter a valid email address.");
+    } else {
+      if (emailInput) {
+        (emailInput as HTMLInputElement).style.border = "none";
+      }
+      setEmailError("");
+    }
+    return email;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,14 +51,25 @@ export default function SignUpPage() {
       <h2 className="text-xl font-bold mb-4">Sign Up</h2>
       <input
         type="email"
+        id="email"
         value={email}
-        onChange={(e) => setEmail(e.target.value)}
+        onChange={(e) => {
+          setEmail(e.target.value);
+          setTimeout(() => {
+            isValidEmail(e.target.value);
+          }, 2000);
+        }}
         placeholder="Email"
-        className="w-full text-black p-2 border mb-2"
+        pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+        className="w-full text-black border p-2 mb-2"
         required
       />
+      {emailError && (
+        <p className="text-red-600 text-sm mb-2">{emailError}</p>
+      )}
       <input
         type="text"
+        id="username"
         value={username}
         onChange={(e) => setUsername(e.target.value)}
         placeholder="Username"
@@ -46,15 +78,27 @@ export default function SignUpPage() {
       />
       <input
         type="password"
+        id="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder="Password"
         className="w-full text-black p-2 border mb-4"
         required
       />
-      <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded">
+      <button
+        type="submit"
+        id="submit"
+        className="w-full bg-blue-600 text-white p-2 rounded disabled:bg-gray-400"
+        disabled={!!emailError}
+      >
         Sign Up
       </button>
+      <p className="mt-4 text-sm text-center">
+        Already have an account?{" "}
+        <a href="/login" className="text-blue-800 hover:underline">
+          Log in here
+        </a>
+      </p>
     </form>
   );
 }

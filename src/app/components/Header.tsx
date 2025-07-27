@@ -30,11 +30,7 @@ export default function Header() {
               Logout
             </button>
           </>
-        ) : (
-          <>
-            <span className="text-gray-700">Please sign in</span>
-          </>
-        )}
+        ) : (null)}
       </div>
     </header>
   );
