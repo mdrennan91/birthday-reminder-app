@@ -73,6 +73,11 @@ export default function AddBirthdayForm({
         newErrors.phone = "Invalid phone number format";
       }
     }
+    // Validate year that can't be greater than the current year or less than 150 years ago
+    const currentYear = new Date().getFullYear();
+    if (Number(formData.year) > currentYear || Number(formData.year) < currentYear - 150) {
+      newErrors.year = "Invalid year";
+    }
     return newErrors;
   };
 
@@ -86,7 +91,7 @@ export default function AddBirthdayForm({
       return;
     }
 
-    const year = formData.year.trim() || "0000";
+    const year = formData.year.trim();
     const paddedMonth = formData.month.padStart(2, "0");
     const paddedDay = formData.day.padStart(2, "0");
     const birthday = `${year}-${paddedMonth}-${paddedDay}`;
@@ -172,11 +177,15 @@ export default function AddBirthdayForm({
           <input
             type="number"
             name="year"
-            placeholder="Year (optional)"
+            placeholder="Year *"
             value={formData.year}
             onChange={handleChange}
             className="w-full p-2 border rounded"
+            required
           />
+          {errors.year && (
+            <p className="text-red-500 text-sm">{errors.year}</p>
+          )}
         </div>
 
         <div>

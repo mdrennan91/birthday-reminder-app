@@ -9,6 +9,7 @@ export default function SignUpPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   function isValidEmail(email: string) {
     // Simple email regex for server-side validation
@@ -28,6 +29,27 @@ export default function SignUpPage() {
       setEmailError("");
     }
     return email;
+  }
+
+  function isValidPassword(password: string) {
+    const attempt = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+])[A-Za-z\d!@#$%^&*()_+]{7,}$/.test(
+      password
+    );
+    const passwordInput = document.getElementById("password");
+    if (!attempt) {
+      if (passwordInput) {
+        (passwordInput as HTMLInputElement).style.border = "3px solid red";
+      }
+      setPasswordError(
+        "Password must be at least 7 characters long and include uppercase, lowercase, number, and special character."
+      );
+    } else {
+      if (passwordInput) {
+        (passwordInput as HTMLInputElement).style.border = "none";
+      }
+      setPasswordError("");
+    }
+    return password;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,16 +102,25 @@ export default function SignUpPage() {
         type="password"
         id="password"
         value={password}
-        onChange={(e) => setPassword(e.target.value)}
+        pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+])[A-Za-z\d!@#$%^&*()_+]{7,}$"
+        onChange={(e) => {
+          setPassword(e.target.value);
+          setTimeout(() => {
+            isValidPassword(e.target.value);
+          }, 2000);
+        }}
         placeholder="Password"
         className="w-full text-black p-2 border mb-4"
         required
       />
+      {passwordError && (
+        <p className="text-red-600 text-sm mb-2">{passwordError}</p>
+      )}
       <button
         type="submit"
         id="submit"
         className="w-full bg-blue-600 text-white p-2 rounded disabled:bg-gray-400"
-        disabled={!!emailError}
+        disabled={!!emailError || !!passwordError}
       >
         Sign Up
       </button>
