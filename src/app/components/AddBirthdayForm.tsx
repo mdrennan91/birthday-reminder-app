@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
-import type { Person } from "@/types";
+import type { Person, PersonWithBirthday } from "@/types";
 
 export default function AddBirthdayForm({
   onClose,
   refreshPeople,
   personToEdit,
+  onUpdated,
 }: {
   onClose: () => void;
   refreshPeople: () => Promise<void>;
   personToEdit?: Person | null;
+  onUpdated?: (updatedPerson: PersonWithBirthday) => void;
 }) {
   const [formData, setFormData] = useState({
     name: "",
@@ -21,6 +23,23 @@ export default function AddBirthdayForm({
     notes: "",
     avatarUrl: "",
   });
+
+  const [availableCategories, setAvailableCategories] = useState<
+    { _id: string; name: string; color: string }[]
+  >([]);
+
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function fetchCategories() {
+      const res = await fetch("/api/categories");
+      if (res.ok) {
+        const data = await res.json();
+        setAvailableCategories(data);
+      }
+    }
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     if (personToEdit) {
@@ -36,6 +55,8 @@ export default function AddBirthdayForm({
         notes: personToEdit.notes || "",
         avatarUrl: personToEdit.avatarUrl || "",
       });
+
+      setSelectedCategoryIds(personToEdit.categories?.map((cat) => cat._id) || []);
     }
   }, [personToEdit]);
 
@@ -63,19 +84,22 @@ export default function AddBirthdayForm({
       newErrors.day = "Invalid day";
     if (formData.email.length > 0 && formData.email !== "") {
       const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-      if (!emailRegex.test(formData.email) && formData.email.length > 0) {
+      if (!emailRegex.test(formData.email)) {
         newErrors.email = "Invalid email format";
       }
     }
     if (formData.phone.length > 0 && formData.phone !== "") {
-      const phoneRegex = /^\d{10}$/; // Example: 10-digit phone number
-      if (!phoneRegex.test(formData.phone) && formData.phone.length > 0) {
+      const phoneRegex = /^\d{10}$/;
+      if (!phoneRegex.test(formData.phone)) {
         newErrors.phone = "Invalid phone number format";
       }
     }
     // Validate year that can't be greater than the current year or less than 150 years ago
     const currentYear = new Date().getFullYear();
-    if (Number(formData.year) > currentYear || Number(formData.year) < currentYear - 150) {
+    if (
+      Number(formData.year) > currentYear ||
+      Number(formData.year) < currentYear - 150
+    ) {
       newErrors.year = "Invalid year";
     }
     return newErrors;
@@ -99,6 +123,7 @@ export default function AddBirthdayForm({
     const payload = {
       ...formData,
       birthday,
+      categories: selectedCategoryIds,
     };
 
     try {
@@ -115,6 +140,12 @@ export default function AddBirthdayForm({
 
       await refreshPeople();
       onClose();
+
+      if (personToEdit) {
+        const updated = await res.json();
+        if (onUpdated) onUpdated(updated);
+      }
+      
     } catch (err) {
       console.error("Error submitting form:", err);
     }
@@ -249,6 +280,30 @@ export default function AddBirthdayForm({
         onChange={handleChange}
         className="w-full p-2 border rounded"
       />
+
+      <div>
+        <label className="block font-medium mb-1">Categories</label>
+        <div className="flex flex-wrap gap-2">
+          {availableCategories.map((cat) => (
+            <label key={cat._id} className="flex items-center gap-1 text-sm">
+              <input
+                type="checkbox"
+                checked={selectedCategoryIds.includes(cat._id)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedCategoryIds([...selectedCategoryIds, cat._id]);
+                  } else {
+                    setSelectedCategoryIds(
+                      selectedCategoryIds.filter((id) => id !== cat._id)
+                    );
+                  }
+                }}
+              />
+              <span style={{ color: cat.color }}>{cat.name}</span>
+            </label>
+          ))}
+        </div>
+      </div>
 
       <div className="flex justify-end space-x-2">
         <button
