@@ -9,7 +9,11 @@ export type Person = {
   address?: string;
   notes?: string;
   avatarUrl?: string;
-  categories?: string[];
+  categories?: {
+    _id: string;
+    name: string;
+    color: string;
+  }[];
 };
 
 

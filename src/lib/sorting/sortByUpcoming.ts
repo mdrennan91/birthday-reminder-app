@@ -29,9 +29,8 @@ export function sortByUpcoming({
     .filter(p =>
       !activeCategory ||
       (Array.isArray(p.categories) &&
-        p.categories.some((cat: string) =>
-          typeof cat === "string" &&
-          cat.toLowerCase() === activeCategory.toLowerCase()
+        p.categories.some(
+          (cat) => cat.name?.toLowerCase() === activeCategory.toLowerCase()
         ))
     )
     .map(person => {

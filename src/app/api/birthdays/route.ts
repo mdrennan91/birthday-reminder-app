@@ -24,7 +24,7 @@ export async function GET() {
     }
 
     // Query the database for birthdays associated with this user
-    const people = await Birthday.find({ userId: session.user.id }).lean();
+    const people = await Birthday.find({ userId: session.user.id }).populate("categories").lean();
 
     // Return the list of birthdays
     return NextResponse.json(people);
@@ -78,7 +78,8 @@ export async function POST(req: NextRequest) {
     });
 
     // Return the newly created birthday document
-    return NextResponse.json(newBirthday, { status: 201 });
+    const populated = await newBirthday.populate("categories");
+    return NextResponse.json(populated, { status: 201 });
   } catch (err) {
     console.error("Error creating birthday:", err);
     return NextResponse.json({ message: "Server error" }, { status: 500 });

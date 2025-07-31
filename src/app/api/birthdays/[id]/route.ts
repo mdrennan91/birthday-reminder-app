@@ -67,7 +67,8 @@ export async function PUT(
       return NextResponse.json({ message: "Birthday not found" }, { status: 404 });
     }
 
-    return NextResponse.json(updated);
+    const populated = await updated.populate("categories");
+    return NextResponse.json(populated);
   } catch (err) {
     console.error("Error updating birthday:", err);
     return NextResponse.json({ message: "Server error" }, { status: 500 });
