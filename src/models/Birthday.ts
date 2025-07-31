@@ -10,6 +10,7 @@ const BirthdaySchema = new Schema({
   avatarUrl: String,
   userId: String, 
   categories: [{ type: mongoose.Schema.Types.ObjectId, ref: "Category" }],
+  pinned: { type: Boolean, default: false },
 });
 
 export default mongoose.models.Birthday || mongoose.model("Birthday", BirthdaySchema);

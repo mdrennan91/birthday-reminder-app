@@ -5,7 +5,6 @@ import Image from "next/image";
 import dayjs from "dayjs";
 import isToday from "dayjs/plugin/isToday";
 import { useSession } from "next-auth/react";
-
 import { Person, PersonWithBirthday } from "@/types";
 import { addBirthdayThisYear } from "@/lib/helper/addBirthdayThisYear";
 import { sortByUpcoming } from "@/lib/sorting/sortByUpcoming";
@@ -27,7 +26,6 @@ export default function MainContent() {
   const [people, setPeople] = useState<Person[]>([]);
   const [selectedPerson, setSelectedPerson] = useState<PersonWithBirthday | null>(null);
   const [displayCount, setDisplayCount] = useState(4);
-  const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [showAddModal, setShowAddForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -59,23 +57,24 @@ export default function MainContent() {
   // Add birthdayThisYear property to each person
   const peopleWithBirthday = useMemo(() => {
     return addBirthdayThisYear(people, today);
-  }, [people, today]);
+  }, [people, today]); 
+
 
   // Filter and sort upcoming birthdays
   const upcoming = useMemo(() => {
     return sortByUpcoming({
       people: peopleWithBirthday,
       today,
-      pinnedIds,
       activeCategory,
       displayCount,
     });
-  }, [peopleWithBirthday, today, pinnedIds, activeCategory, displayCount]);
+  }, [peopleWithBirthday, today, activeCategory, displayCount]);
 
   // Sort pinned people to the top
   const combinedList = useMemo(() => {
-    return sortPinnedFirst(upcoming, pinnedIds);
-  }, [upcoming, pinnedIds]);
+    return sortPinnedFirst(upcoming);
+  }, [upcoming]);
+
 
   // Group the final sorted list by month for display
   const groupedByMonth = useMemo(() => {
@@ -134,7 +133,7 @@ export default function MainContent() {
         Object.entries(groupedByMonth).map(([month, peopleInMonth]) => (
           <div key={month} className="mb-6">
             <h3 className="text-md font-bold text-teal mb-2">{month}</h3>
-            <ul className="space-y-4">
+            <ul key={displayCount}  className="space-y-4">
               {peopleInMonth.map((person) => {
                 const age = person.birthdayThisYear.diff(dayjs(person.birthday), "year");
                 const daysUntil = person.birthdayThisYear.diff(today, "day");
@@ -149,14 +148,20 @@ export default function MainContent() {
                     <div className="flex items-center gap-3">
                       <input
                         type="checkbox"
-                        checked={pinnedIds.includes(person._id)}
-                        onChange={(e) => {
+                        checked={person.pinned ?? false}
+                        onChange={async (e) => {
                           e.stopPropagation();
-                          setPinnedIds((prev) =>
-                            prev.includes(person._id)
-                              ? prev.filter((id) => id !== person._id)
-                              : [...prev, person._id]
-                          );
+                          const newPinned = e.target.checked;
+                          try {
+                            await fetch(`/api/birthdays/${person._id}/pin`, {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ pinned: newPinned }),
+                            });
+                            await refreshPeople(setPeople); // Reload from DB
+                          } catch (err) {
+                            console.error("Failed to update pinned state:", err);
+                          }
                         }}
                       />
                       <Image

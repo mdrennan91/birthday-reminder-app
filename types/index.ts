@@ -10,6 +10,7 @@ export type Person = {
   notes?: string;
   avatarUrl?: string;
   categories?: string[];
+  pinned?: boolean;
 };
 
 
