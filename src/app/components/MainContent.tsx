@@ -1,4 +1,4 @@
-I lost my updates to mainCOntnet: "use client";
+"use client";
 
 import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
@@ -15,6 +15,7 @@ import { fetchBirthdays } from "@/lib/api/fetchBirthdays";
 import { deleteBirthday } from "@/lib/api/deleteBirthday";
 import { refreshPeople } from "@/lib/api/refreshPeople";
 import AddBirthdayModal from "./AddEditBirthdayModal";
+import { updatePinnedStatus } from "@/lib/api/updatePinnedStatus";
 
 dayjs.extend(isToday);
 
@@ -25,7 +26,6 @@ export default function MainContent() {
   const [people, setPeople] = useState<Person[]>([]);
   const [selectedPerson, setSelectedPerson] = useState<PersonWithBirthday | null>(null);
   const [displayCount, setDisplayCount] = useState(4);
-  const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [showAddModal, setShowAddForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -157,7 +157,7 @@ export default function MainContent() {
           Object.entries(groupedByMonth).map(([month, peopleInMonth]) => (
             <div key={month} className="mb-6">
               <h3 className="text-md font-bold text-teal mb-2">{month}</h3>
-              <ul className="space-y-4">
+              <ul key={displayCount} className="space-y-4">
                 {peopleInMonth.map((person) => {
                   const age = person.birthdayThisYear.diff(dayjs(person.birthday), "year");
                   const daysUntil = person.birthdayThisYear.diff(today, "day");
@@ -177,11 +177,7 @@ export default function MainContent() {
                           e.stopPropagation();
                           const newPinned = e.target.checked;
                           try {
-                            await fetch(`/api/birthdays/${person._id}/pin`, {
-                              method: "PATCH",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ pinned: newPinned }),
-                            });
+                            await updatePinnedStatus(person._id, newPinned);
                             await refreshPeople(setPeople); // reload people from DB
                           } catch (err) {
                             console.error("Failed to update pinned state:", err);

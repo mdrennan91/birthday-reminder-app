@@ -28,8 +28,8 @@ export function sortByUpcoming({
           Array.isArray(p.categories) &&
           p.categories.some(
             (cat) =>
-              typeof cat === "string" &&
-              cat.toLowerCase() === activeCategory.toLowerCase()
+              typeof cat.name === "string" &&
+              cat.name.toLowerCase() === activeCategory.toLowerCase()
           )
       )
     : unpinned;
@@ -40,10 +40,11 @@ export function sortByUpcoming({
   // Add birthdayThisYear and sort by date
   const withBirthday = addBirthdayThisYear(combined, today);
 
+  // Sort by upcoming date
   const sorted = [...withBirthday].sort((a, b) =>
     a.birthdayThisYear.diff(b.birthdayThisYear)
   );
 
+  // Return only the top N
   return sorted.slice(0, displayCount);
-
 }
