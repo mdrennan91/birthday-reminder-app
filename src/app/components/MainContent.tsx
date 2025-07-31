@@ -15,6 +15,7 @@ import { fetchBirthdays } from "@/lib/api/fetchBirthdays";
 import { deleteBirthday } from "@/lib/api/deleteBirthday";
 import { refreshPeople } from "@/lib/api/refreshPeople";
 import AddBirthdayModal from "./AddEditBirthdayModal";
+import { updatePinnedStatus } from "@/lib/api/updatePinnedStatus";
 
 dayjs.extend(isToday);
 
@@ -25,7 +26,6 @@ export default function MainContent() {
   const [people, setPeople] = useState<Person[]>([]);
   const [selectedPerson, setSelectedPerson] = useState<PersonWithBirthday | null>(null);
   const [displayCount, setDisplayCount] = useState(4);
-  const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [showAddModal, setShowAddForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -90,15 +90,16 @@ export default function MainContent() {
     return sortByUpcoming({
       people: peopleWithBirthday,
       today,
-      pinnedIds,
       activeCategory,
       displayCount,
     });
-  }, [peopleWithBirthday, today, pinnedIds, activeCategory, displayCount]);
+  }, [peopleWithBirthday, today, activeCategory, displayCount]);
+
 
   const combinedList = useMemo(() => {
-    return sortPinnedFirst(upcoming, pinnedIds);
-  }, [upcoming, pinnedIds]);
+    return sortPinnedFirst(upcoming);
+  }, [upcoming]);
+
 
   const groupedByMonth = useMemo(() => {
     return groupByMonth(combinedList);
@@ -156,7 +157,7 @@ export default function MainContent() {
           Object.entries(groupedByMonth).map(([month, peopleInMonth]) => (
             <div key={month} className="mb-6">
               <h3 className="text-md font-bold text-teal mb-2">{month}</h3>
-              <ul className="space-y-4">
+              <ul key={displayCount} className="space-y-4">
                 {peopleInMonth.map((person) => {
                   const age = person.birthdayThisYear.diff(dayjs(person.birthday), "year");
                   const daysUntil = person.birthdayThisYear.diff(today, "day");
@@ -169,18 +170,20 @@ export default function MainContent() {
                       onClick={() => setSelectedPerson(person)}
                     >
                       <div className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={pinnedIds.includes(person._id)}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            setPinnedIds((prev) =>
-                              prev.includes(person._id)
-                                ? prev.filter((id) => id !== person._id)
-                                : [...prev, person._id]
-                            );
-                          }}
-                        />
+                      <input
+                        type="checkbox"
+                        checked={person.pinned ?? false}
+                        onChange={async (e) => {
+                          e.stopPropagation();
+                          const newPinned = e.target.checked;
+                          try {
+                            await updatePinnedStatus(person._id, newPinned);
+                            await refreshPeople(setPeople); // reload people from DB
+                          } catch (err) {
+                            console.error("Failed to update pinned state:", err);
+                          }
+                        }}
+                      />
                         <Image
                           src={person.avatarUrl || "/default-avatar.png"}
                           alt={person.name}

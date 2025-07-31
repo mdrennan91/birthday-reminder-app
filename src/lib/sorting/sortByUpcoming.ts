@@ -1,45 +1,50 @@
 import dayjs from "dayjs";
-import type { Person } from "@/types";
-
-// Define the extended type for birthday calculation
-export interface PersonWithBirthday extends Person {
-  birthdayThisYear: dayjs.Dayjs;
-}
+import type { Person, PersonWithBirthday } from "@/types";
+import { addBirthdayThisYear } from "../helper/addBirthdayThisYear";
 
 /**
- * Sorts a list of people by how soon their birthday is from today.
- * Optionally filters by pinned status and/or category.
+ * Returns a list of people sorted by upcoming birthday.
+ * Pinned people are always included, regardless of category.
  */
 export function sortByUpcoming({
   people,
   today,
-  pinnedIds = [],
   activeCategory = null,
   displayCount = 4,
 }: {
   people: Person[];
   today: dayjs.Dayjs;
-  pinnedIds?: string[];
   activeCategory?: string | null;
   displayCount?: number;
 }): PersonWithBirthday[] {
+  // Split pinned and unpinned
+  const pinned = people.filter((p) => p.pinned);
+  const unpinned = people.filter((p) => !p.pinned);
 
-  return people
-    .filter(p => !pinnedIds.includes(p._id))
-    .filter(p =>
-      !activeCategory ||
-      (Array.isArray(p.categories) &&
-        p.categories.some(
-          (cat) => cat.name?.toLowerCase() === activeCategory.toLowerCase()
-        ))
-    )
-    .map(person => {
-      let birthdayThisYear = dayjs(person.birthday).set("year", today.year());
-      if (birthdayThisYear.isBefore(today, "day")) {
-        birthdayThisYear = birthdayThisYear.add(1, "year");
-      }
-      return { ...person, birthdayThisYear };
-    })
-    .sort((a, b) => a.birthdayThisYear.diff(b.birthdayThisYear))
-    .slice(0, displayCount);
+  // Filter unpinned by category (if needed)
+  const categoryFiltered = activeCategory
+    ? unpinned.filter(
+        (p) =>
+          Array.isArray(p.categories) &&
+          p.categories.some(
+            (cat) =>
+              typeof cat.name === "string" &&
+              cat.name.toLowerCase() === activeCategory.toLowerCase()
+          )
+      )
+    : unpinned;
+
+  // Combine pinned + filtered unpinned
+  const combined = [...pinned, ...categoryFiltered];
+
+  // Add birthdayThisYear and sort by date
+  const withBirthday = addBirthdayThisYear(combined, today);
+
+  // Sort by upcoming date
+  const sorted = [...withBirthday].sort((a, b) =>
+    a.birthdayThisYear.diff(b.birthdayThisYear)
+  );
+
+  // Return only the top N
+  return sorted.slice(0, displayCount);
 }
