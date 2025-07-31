@@ -11,6 +11,7 @@ interface AddBirthdayModalProps {
   onClose: () => void;
   onRefresh: () => Promise<void>;
   personToEdit?: PersonWithBirthday | null;
+  onUpdated?: (updatedPerson: PersonWithBirthday) => void;
 }
 
 /**
@@ -21,6 +22,7 @@ export default function AddBirthdayModal({
   onClose,
   onRefresh,
   personToEdit = null,
+  onUpdated,
 }: AddBirthdayModalProps) {
   if (!show) return null;
 
@@ -31,6 +33,7 @@ export default function AddBirthdayModal({
           onClose={onClose}
           refreshPeople={onRefresh}
           personToEdit={personToEdit}
+          onUpdated={onUpdated}
         />
       </div>
     </div>

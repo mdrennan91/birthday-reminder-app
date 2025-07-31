@@ -45,4 +45,5 @@ export function sortByUpcoming({
   );
 
   return sorted.slice(0, displayCount);
+
 }

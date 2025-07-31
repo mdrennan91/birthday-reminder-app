@@ -77,8 +77,8 @@ export default function Sidebar() {
       });
 
       if (res.ok) {
-        const created = await res.json();
-        setCategories((prev) => [...prev, created]);
+        await fetchCategories();
+        window.dispatchEvent(new Event("categoryUpdated"));
       }
     } else if (modalMode === "edit" && selectedCategory) {
       const res = await fetch(`/api/categories/${selectedCategory._id}`, {
@@ -88,11 +88,8 @@ export default function Sidebar() {
       });
 
       if (res.ok) {
-        setCategories((prev) =>
-          prev.map((cat) =>
-            cat._id === selectedCategory._id ? { ...cat, name, color } : cat
-          )
-        );
+        await fetchCategories();
+        window.dispatchEvent(new Event("categoryUpdated"));
       }
     }
   };
@@ -104,8 +101,10 @@ export default function Sidebar() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, color }),
     });
+
     if (res.ok) {
       fetchCategories();
+      window.dispatchEvent(new Event("categoryUpdated"));
     }
   };
 

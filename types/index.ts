@@ -9,8 +9,13 @@ export type Person = {
   address?: string;
   notes?: string;
   avatarUrl?: string;
-  categories?: string[];
   pinned?: boolean;
+  categories?: {
+    _id: string;
+    name: string;
+    color: string;
+  }[];
+
 };
 
 
