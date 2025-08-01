@@ -17,6 +17,9 @@ const cabin = Cabin({
 export const metadata: Metadata = {
   title: "Birthday Reminder App",
   description: "Track and celebrate the people you care about",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export default function RootLayout({

@@ -1,5 +1,8 @@
 "use client";
 
+import Image from "next/image";
+
+
 import { useSession, signOut } from "next-auth/react";
 
 export default function Header() {
@@ -9,9 +12,13 @@ export default function Header() {
     <header className="w-full flex justify-between items-center bg-lavender border-b px-6 py-4 shadow-sm">
       {/* Logo + Title */}
       <div className="flex items-center gap-2">
-        <div className="w-10 h-10 bg-teal rounded-full flex items-center justify-center text-white font-bold">
-          L
-        </div>
+        <Image
+          src="/birthday-logo.png"
+          alt="Birthday Reminder logo"
+          width={40}
+          height={40}
+          className="object-contain"
+        />
         <h1 className="text-xl font-bold text-teal">Birthday Reminder</h1>
       </div>
 
@@ -30,7 +37,7 @@ export default function Header() {
               Logout
             </button>
           </>
-        ) : (null)}
+        ) : null}
       </div>
     </header>
   );
