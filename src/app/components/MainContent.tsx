@@ -1,4 +1,4 @@
-"use client";
+"use client"; // Enables client-side rendering
 
 import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
@@ -16,13 +16,19 @@ import { deleteBirthday } from "@/lib/api/deleteBirthday";
 import { refreshPeople } from "@/lib/api/refreshPeople";
 import AddBirthdayModal from "./AddEditBirthdayModal";
 import { updatePinnedStatus } from "@/lib/api/updatePinnedStatus";
+import { useSignedAvatars } from "@/lib/helper/useSignedAvatars";
+import PersonDetails from "./PersonDetails";
 
+// Extend dayjs with isToday plugin
 dayjs.extend(isToday);
 
+// Custom DOM event name for category filtering
 const CATEGORY_FILTER_EVENT = "filter-category";
 
 export default function MainContent() {
   const { status } = useSession();
+
+  // === State ===
   const [people, setPeople] = useState<Person[]>([]);
   const [selectedPerson, setSelectedPerson] =
     useState<PersonWithBirthday | null>(null);
@@ -36,8 +42,13 @@ export default function MainContent() {
   const [allPeople, setAllPeople] = useState<Person[]>([]); // Full source list
   const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
+  // Avatar mapping by person ID
+  const avatarUrls = useSignedAvatars(people);
   const today = dayjs();
 
+  // === Effects ===
+
+  // Fetch people after login
   useEffect(() => {
     if (status === "authenticated") {
       fetchBirthdays().then((birthdays) => {
@@ -47,6 +58,7 @@ export default function MainContent() {
     }
   }, [status]);
 
+  // Handle category filter event from sidebar
   useEffect(() => {
     const handleCategoryFilter = (e: CustomEvent) => {
       setActiveCategory(e.detail);
@@ -64,6 +76,7 @@ export default function MainContent() {
     };
   }, []);
 
+  // Fetch categories on mount
   useEffect(() => {
     async function fetchCategories() {
       const res = await fetch("/api/categories");
@@ -78,6 +91,7 @@ export default function MainContent() {
     }
   }, [status]);
 
+  // Listen for "categoryUpdated" event and refresh the list
   useEffect(() => {
     const handleCategoryUpdate = () => {
       fetch("/api/categories")
@@ -92,10 +106,14 @@ export default function MainContent() {
     };
   }, []);
 
+  // === Computed Data ===
+
+  // Add derived `birthdayThisYear` field to people
   const peopleWithBirthday = useMemo(() => {
     return addBirthdayThisYear(people, today);
   }, [people, today]);
 
+  // Filter/sort for upcoming birthdays in active category
   const upcoming = useMemo(() => {
     return sortByUpcoming({
       people: peopleWithBirthday,
@@ -105,14 +123,20 @@ export default function MainContent() {
     });
   }, [peopleWithBirthday, today, activeCategory, displayCount]);
 
+  // Ensure pinned birthdays appear at the top
   const combinedList = useMemo(() => {
     return sortPinnedFirst(upcoming);
   }, [upcoming]);
 
+
+  // Group by month for visual grouping
   const groupedByMonth = useMemo(() => {
     return groupByMonth(combinedList);
   }, [combinedList]);
 
+  // === Handlers ===
+
+  // Handle deleting a selected birthday
   const handleDelete = async () => {
     if (!selectedPerson) return;
 
@@ -131,8 +155,21 @@ export default function MainContent() {
     }
   };
 
+  // === Conditional Rendering ===
+
+  if (status === "unauthenticated") {
+    return null; // Hide content until login
+  }
+
+  if (status === "loading") {
+    return <div className="p-4 text-center">Loading...</div>;
+  }
+
+  // === Render ===
+
   return (
     <main className="flex flex-1 overflow-hidden">
+      {/* Left Column: List View */}
       <section className="w-1/2 p-4 border-r border-teal overflow-y-auto bg-white">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold">Upcoming Birthdays</h2>
@@ -167,6 +204,7 @@ export default function MainContent() {
               }}
             />
           </div>
+          {/* Select count of birthdays to display */}
           <select
             className="border p-1 text-sm rounded"
             value={displayCount}
@@ -178,6 +216,8 @@ export default function MainContent() {
               </option>
             ))}
           </select>
+
+          {/* Open add birthday modal */}
           <button
             onClick={() => {
               setIsEditing(false);
@@ -186,15 +226,17 @@ export default function MainContent() {
             }}
             className="px-3 py-1 text-sm bg-teal text-white rounded hover:bg-teal/80"
           >
-            Add Birthday
+            + Add Birthday
           </button>
         </div>
 
+        {/* No people found */}
         {combinedList.length === 0 ? (
           <div className="text-center text-gray-600 mt-10">
             No birthdays found in this category.
           </div>
         ) : (
+          // Render birthdays grouped by month
           Object.entries(groupedByMonth).map(([month, peopleInMonth]) => (
             <div key={month} className="mb-6">
               <h3 className="text-md font-bold text-teal mb-2">{month}</h3>
@@ -216,6 +258,7 @@ export default function MainContent() {
                       onClick={() => setSelectedPerson(person)}
                     >
                       <div className="flex items-center gap-3">
+                        {/* Pin checkbox */}
                         <input
                           type="checkbox"
                           checked={person.pinned ?? false}
@@ -224,6 +267,7 @@ export default function MainContent() {
                             const newPinned = e.target.checked;
                             try {
                               await updatePinnedStatus(person._id, newPinned);
+                        {/* Avatar image */}
                               await refreshPeople(setPeople); // reload people from DB
                             } catch (err) {
                               console.error(
@@ -234,7 +278,7 @@ export default function MainContent() {
                           }}
                         />
                         <Image
-                          src={person.avatarUrl || "/default-avatar.png"}
+                          src={avatarUrls[person._id] || "/default-avatar.png"}
                           alt={person.name}
                           width={40}
                           height={40}
@@ -242,6 +286,7 @@ export default function MainContent() {
                         />
                         <div className="text-left">
                           <div className="font-semibold">{person.name}</div>
+                          {/* Category badges */}
                           <div className="text-sm text-gray-600">
                             Age: {age}
                           </div>
@@ -286,79 +331,19 @@ export default function MainContent() {
         )}
       </section>
 
+      {/* Right Column: Person Details */}
       <section className="w-1/2 p-4 overflow-y-auto bg-lavender">
         {selectedPerson ? (
-          <div>
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-xl font-bold">{selectedPerson.name}</h2>
-              <div className="space-x-2">
-                <button
-                  onClick={() => {
-                    setIsEditing(true);
-                    setShowAddForm(true);
-                  }}
-                  className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-            <Image
-              src={selectedPerson.avatarUrl || "/default-avatar.png"}
-              alt={selectedPerson.name}
-              width={96}
-              height={96}
-              className="w-24 h-24 rounded-full mb-4 border border-teal"
-            />
-            <div className="text-gray-700 space-y-2">
-              <p>
-                <strong>Birthday:</strong> {selectedPerson.birthday}
-              </p>
-              <p>
-                <strong>Phone:</strong> {selectedPerson.phone}
-              </p>
-              <p>
-                <strong>Email:</strong> {selectedPerson.email}
-              </p>
-              <p>
-                <strong>Address:</strong> {selectedPerson.address}
-              </p>
-              <p>
-                <strong>Notes:</strong> {selectedPerson.notes}
-              </p>
-
-              {selectedPerson.categories &&
-                selectedPerson.categories.length > 0 && (
-                  <div className="mt-4">
-                    <strong>Tags:</strong>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {selectedPerson.categories.map((catRef) => {
-                        const matching = allCategories.find(
-                          (c) => c._id === catRef._id
-                        );
-                        return (
-                          <span
-                            key={catRef._id}
-                            className="px-2 py-1 rounded text-white text-sm"
-                            style={{
-                              backgroundColor: matching?.color || "#888",
-                            }}
-                          >
-                            {matching?.name || "Unknown"}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-            </div>
-          </div>
+          <PersonDetails
+            person={selectedPerson}
+            allCategories={allCategories}
+            avatarUrl={avatarUrls[selectedPerson._id]}
+            onEdit={() => {
+              setIsEditing(true);
+              setShowAddForm(true);
+            }}
+            onDelete={handleDelete}
+          />
         ) : (
           <p className="text-gray-600">
             Select a person to view their details.
@@ -366,6 +351,7 @@ export default function MainContent() {
         )}
       </section>
 
+      {/* Modal for adding or editing birthdays */}
       <AddBirthdayModal
         show={showAddModal}
         onClose={() => {
@@ -377,7 +363,7 @@ export default function MainContent() {
         }}
         personToEdit={isEditing ? selectedPerson : null}
         onUpdated={(updatedPerson) => {
-          setSelectedPerson(updatedPerson); // ✅ this will refresh the details pane
+          setSelectedPerson(updatedPerson); // Refresh details panel if person is updated
         }}
       />
     </main>

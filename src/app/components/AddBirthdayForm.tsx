@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import type { Person, PersonWithBirthday } from "@/types";
+import AvatarUploadDialog from "./AvatarUploadDialog";
 
 export default function AddBirthdayForm({
   onClose,
@@ -29,6 +30,9 @@ export default function AddBirthdayForm({
   >([]);
 
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [newlyCreatedId, setNewlyCreatedId] = useState<string | null>(null);
+  const [showUploadPrompt, setShowUploadPrompt] = useState(false);
 
   useEffect(() => {
     async function fetchCategories() {
@@ -60,26 +64,16 @@ export default function AddBirthdayForm({
     }
   }, [personToEdit]);
 
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
-
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >
   ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    //set regex validation for phone and email if needed
   };
 
   const validate = () => {
     const newErrors: typeof errors = {};
-    // if avatarUrl, ensure it is a valid url that ties to an image file(jpg, png, etc.)
-    if (formData.avatarUrl) {
-      const urlPattern = /\.(jpg|jpeg|png)$/;
-      if (!urlPattern.test(formData.avatarUrl)) {
-        newErrors.avatarUrl = "Invalid image URL";
-      }
-    }
     if (Number(formData.day) < 1 || Number(formData.day) > 31)
       newErrors.day = "Invalid day";
     if (formData.email.length > 0 && formData.email !== "") {
@@ -94,7 +88,6 @@ export default function AddBirthdayForm({
         newErrors.phone = "Invalid phone number format";
       }
     }
-    // Validate year that can't be greater than the current year or less than 150 years ago
     const currentYear = new Date().getFullYear();
     if (
       Number(formData.year) > currentYear ||
@@ -106,10 +99,8 @@ export default function AddBirthdayForm({
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    console.log("hit")
     e.preventDefault();
     const validationErrors = validate();
-    console.log("Validation errors:", validationErrors);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
@@ -138,14 +129,18 @@ export default function AddBirthdayForm({
 
       if (!res.ok) throw new Error("Failed to save birthday");
 
+      const data = await res.json();
       await refreshPeople();
-      onClose();
 
       if (personToEdit) {
-        const updated = await res.json();
-        if (onUpdated) onUpdated(updated);
+        if (onUpdated) onUpdated(data);
+      } else {
+        await refreshPeople(); // if you weren't already calling this here
       }
-      
+
+      setNewlyCreatedId(data._id);
+      setShowUploadPrompt(true);
+
     } catch (err) {
       console.error("Error submitting form:", err);
     }
@@ -186,9 +181,7 @@ export default function AddBirthdayForm({
               </option>
             ))}
           </select>
-          {errors.month && (
-            <p className="text-red-500 text-sm">{errors.month}</p>
-          )}
+          {errors.month && <p className="text-red-500 text-sm">{errors.month}</p>}
         </div>
 
         <div>
@@ -214,9 +207,7 @@ export default function AddBirthdayForm({
             className="w-full p-2 border rounded"
             required
           />
-          {errors.year && (
-            <p className="text-red-500 text-sm">{errors.year}</p>
-          )}
+          {errors.year && <p className="text-red-500 text-sm">{errors.year}</p>}
         </div>
 
         <div>
@@ -228,9 +219,7 @@ export default function AddBirthdayForm({
             onChange={handleChange}
             className="w-full p-2 border rounded"
           />
-          {errors.phone && (
-            <p className="text-red-500 text-sm">{errors.phone}</p>
-          )}
+          {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
         </div>
 
         <div>
@@ -242,9 +231,7 @@ export default function AddBirthdayForm({
             onChange={handleChange}
             className="w-full p-2 border rounded"
           />
-          {errors.email && (
-            <p className="text-red-500 text-sm">{errors.email}</p>
-          )}
+          {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
         </div>
 
         <div>
@@ -256,20 +243,6 @@ export default function AddBirthdayForm({
             onChange={handleChange}
             className="w-full p-2 border rounded"
           />
-        </div>
-
-        <div>
-          <input
-            type="text"
-            name="avatarUrl"
-            placeholder="Avatar URL"
-            value={formData.avatarUrl}
-            onChange={handleChange}
-            className="w-full p-2 border rounded"
-          />
-          {errors.avatarUrl && (
-            <p className="text-red-500 text-sm">{errors.avatarUrl}</p>
-          )}
         </div>
       </div>
 
@@ -317,9 +290,24 @@ export default function AddBirthdayForm({
           type="submit"
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
         >
-          Save
+          Save ➜ Upload Avatar
         </button>
       </div>
+      {showUploadPrompt && newlyCreatedId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+            <AvatarUploadDialog
+              personId={newlyCreatedId}
+              onUploadComplete={async () => {
+                await refreshPeople();
+                setShowUploadPrompt(false);
+                setNewlyCreatedId(null);
+                onClose();
+              }}
+            />
+          </div>
+        </div>
+      )}
     </form>
   );
 }
