@@ -79,7 +79,7 @@ export default function SignUpPage() {
           setEmail(e.target.value);
           setTimeout(() => {
             isValidEmail(e.target.value);
-          }, 2000);
+          }, 500);
         }}
         placeholder="Email"
         pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
@@ -107,7 +107,7 @@ export default function SignUpPage() {
           setPassword(e.target.value);
           setTimeout(() => {
             isValidPassword(e.target.value);
-          }, 2000);
+          }, 500);
         }}
         placeholder="Password"
         className="w-full text-black p-2 border mb-4"
