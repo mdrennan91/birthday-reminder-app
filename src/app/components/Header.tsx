@@ -12,11 +12,6 @@ export default function Header() {
     <header className="w-full flex justify-between items-center bg-lavender border-b px-6 py-4 shadow-sm">
       {/* Logo + Title */}
       <div className="flex items-center gap-2">
-        <div className="w-10 h-10 bg-teal rounded-full flex items-center justify-center text-white font-bold">
-          L
-        </div>
-        <h1 className="text-xl font-bold text-teal">CakeMe</h1>
-
         <Image
           src="/birthday-logo.png"
           alt="CakeMe logo"
@@ -24,7 +19,7 @@ export default function Header() {
           height={40}
           className="object-contain"
         />
-        <h1 className="text-xl font-bold text-teal">Birthday Reminder</h1>
+        <h1 className="text-xl font-bold text-teal">CakeMe</h1>
       </div>
 
       {/* User Greeting and Auth Buttons */}
