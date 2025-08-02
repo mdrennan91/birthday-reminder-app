@@ -254,7 +254,7 @@ export default function MainContent() {
                   return (
                     <li
                       key={person._id}
-                      className="border border-teal rounded p-4 flex items-center justify-between cursor-pointer hover:bg-teal/5"
+                      className="border border-teal rounded p-4 flex items-center justify-between cursor-pointer hover:bg-teal/25"
                       onClick={() => setSelectedPerson(person)}
                     >
                       <div className="flex items-center gap-3">
