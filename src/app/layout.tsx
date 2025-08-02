@@ -15,7 +15,7 @@ const cabin = Cabin({
 });
 
 export const metadata: Metadata = {
-  title: "Birthday Reminder App",
+  title: "CakeMe App",
   description: "Track and celebrate the people you care about",
 };
 
