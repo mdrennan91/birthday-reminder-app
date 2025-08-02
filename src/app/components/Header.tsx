@@ -1,5 +1,8 @@
 "use client";
 
+import Image from "next/image";
+
+
 import { useSession, signOut } from "next-auth/react";
 
 export default function Header() {
@@ -13,6 +16,15 @@ export default function Header() {
           L
         </div>
         <h1 className="text-xl font-bold text-teal">CakeMe</h1>
+
+        <Image
+          src="/birthday-logo.png"
+          alt="CakeMe logo"
+          width={40}
+          height={40}
+          className="object-contain"
+        />
+        <h1 className="text-xl font-bold text-teal">Birthday Reminder</h1>
       </div>
 
       {/* User Greeting and Auth Buttons */}
@@ -30,7 +42,7 @@ export default function Header() {
               Logout
             </button>
           </>
-        ) : (null)}
+        ) : null}
       </div>
     </header>
   );
