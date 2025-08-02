@@ -33,13 +33,17 @@ export default function MainContent() {
   const [allCategories, setAllCategories] = useState<
     { _id: string; name: string; color: string }[]
   >([]);
-  let timeoutId: NodeJS.Timeout | null = null;
+  const [allPeople, setAllPeople] = useState<Person[]>([]); // Full source list
+  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
   const today = dayjs();
 
   useEffect(() => {
     if (status === "authenticated") {
-      fetchBirthdays().then(setPeople).catch(console.error);
+      fetchBirthdays().then((birthdays) => {
+        setAllPeople(birthdays);
+        setPeople(birthdays);
+      }).catch(console.error);
     }
   }, [status]);
 
@@ -133,33 +137,33 @@ export default function MainContent() {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold">Upcoming Birthdays</h2>
           <div>
-            {/* Search Bar that filters people, return original list if empty, utilize setTimeout to prevent constant calls to fetchBirthdays() */}
+            {/* Search Bar that filters people, return original list if empty, utilize setTimeout to prevent constant calls*/}
             <input
               type="text"
               placeholder="Search..."
               className="border p-1 text-sm rounded"
               onChange={(e) => {
+                const query = e.target.value.toLowerCase();
                 if (timeoutId) {
                   clearTimeout(timeoutId);
                 }
-                let query = e.target.value.toLowerCase();
-                timeoutId = setTimeout(() => {
-                  query = e.target.value.toLowerCase() || ""; // Ensure query is null if input is empty
+                const newTimeout = setTimeout(() => {
                   if (query === "") {
-                    fetchBirthdays().then((birthdays) => setPeople(birthdays));
+                    setPeople(allPeople);
                     return;
                   }
-                  const filtered = people.filter((person) =>
+                  const filtered = allPeople.filter((person) =>
                     person.name.toLowerCase().includes(query)
                   );
-                  if (filtered.length > 0 && query.length > 0) {
+                  if (filtered.length > 0) {
                     setPeople(filtered);
-                  } else if (filtered.length === 0 && query.length > 0) {
+                  } else {
                     alert("No results found.");
-                    e.target.value = ""; // Clear input if no results
-                    fetchBirthdays().then((birthdays) => setPeople(birthdays));
+                    e.target.value = "";
+                    setPeople(allPeople);
                   }
                 }, 1000);
+                setTimeoutId(newTimeout);
               }}
             />
           </div>
