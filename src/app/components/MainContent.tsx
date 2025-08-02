@@ -24,7 +24,8 @@ const CATEGORY_FILTER_EVENT = "filter-category";
 export default function MainContent() {
   const { status } = useSession();
   const [people, setPeople] = useState<Person[]>([]);
-  const [selectedPerson, setSelectedPerson] = useState<PersonWithBirthday | null>(null);
+  const [selectedPerson, setSelectedPerson] =
+    useState<PersonWithBirthday | null>(null);
   const [displayCount, setDisplayCount] = useState(4);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [showAddModal, setShowAddForm] = useState(false);
@@ -32,14 +33,17 @@ export default function MainContent() {
   const [allCategories, setAllCategories] = useState<
     { _id: string; name: string; color: string }[]
   >([]);
+  const [allPeople, setAllPeople] = useState<Person[]>([]); // Full source list
+  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
   const today = dayjs();
 
   useEffect(() => {
     if (status === "authenticated") {
-      fetchBirthdays()
-        .then(setPeople)
-        .catch(console.error);
+      fetchBirthdays().then((birthdays) => {
+        setAllPeople(birthdays);
+        setPeople(birthdays);
+      }).catch(console.error);
     }
   }, [status]);
 
@@ -48,9 +52,15 @@ export default function MainContent() {
       setActiveCategory(e.detail);
     };
 
-    window.addEventListener(CATEGORY_FILTER_EVENT, handleCategoryFilter as EventListener);
+    window.addEventListener(
+      CATEGORY_FILTER_EVENT,
+      handleCategoryFilter as EventListener
+    );
     return () => {
-      window.removeEventListener(CATEGORY_FILTER_EVENT, handleCategoryFilter as EventListener);
+      window.removeEventListener(
+        CATEGORY_FILTER_EVENT,
+        handleCategoryFilter as EventListener
+      );
     };
   }, []);
 
@@ -95,11 +105,9 @@ export default function MainContent() {
     });
   }, [peopleWithBirthday, today, activeCategory, displayCount]);
 
-
   const combinedList = useMemo(() => {
     return sortPinnedFirst(upcoming);
   }, [upcoming]);
-
 
   const groupedByMonth = useMemo(() => {
     return groupByMonth(combinedList);
@@ -108,7 +116,9 @@ export default function MainContent() {
   const handleDelete = async () => {
     if (!selectedPerson) return;
 
-    const confirmed = confirm(`Are you sure you want to delete ${selectedPerson.name}?`);
+    const confirmed = confirm(
+      `Are you sure you want to delete ${selectedPerson.name}?`
+    );
     if (!confirmed) return;
 
     try {
@@ -126,6 +136,37 @@ export default function MainContent() {
       <section className="w-1/2 p-4 border-r border-teal overflow-y-auto bg-white">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold">Upcoming Birthdays</h2>
+          <div>
+            {/* Search Bar that filters people, return original list if empty, utilize setTimeout to prevent constant calls*/}
+            <input
+              type="text"
+              placeholder="Search..."
+              className="border p-1 text-sm rounded"
+              onChange={(e) => {
+                const query = e.target.value.toLowerCase();
+                if (timeoutId) {
+                  clearTimeout(timeoutId);
+                }
+                const newTimeout = setTimeout(() => {
+                  if (query === "") {
+                    setPeople(allPeople);
+                    return;
+                  }
+                  const filtered = allPeople.filter((person) =>
+                    person.name.toLowerCase().includes(query)
+                  );
+                  if (filtered.length > 0) {
+                    setPeople(filtered);
+                  } else {
+                    alert("No results found.");
+                    e.target.value = "";
+                    setPeople(allPeople);
+                  }
+                }, 1000);
+                setTimeoutId(newTimeout);
+              }}
+            />
+          </div>
           <select
             className="border p-1 text-sm rounded"
             value={displayCount}
@@ -159,9 +200,14 @@ export default function MainContent() {
               <h3 className="text-md font-bold text-teal mb-2">{month}</h3>
               <ul key={displayCount} className="space-y-4">
                 {peopleInMonth.map((person) => {
-                  const age = person.birthdayThisYear.diff(dayjs(person.birthday), "year");
+                  const age = person.birthdayThisYear.diff(
+                    dayjs(person.birthday),
+                    "year"
+                  );
                   const daysUntil = person.birthdayThisYear.diff(today, "day");
-                  const daysLabel = person.birthdayThisYear.isToday() ? "Today" : `${daysUntil} days`;
+                  const daysLabel = person.birthdayThisYear.isToday()
+                    ? "Today"
+                    : `${daysUntil} days`;
 
                   return (
                     <li
@@ -170,20 +216,23 @@ export default function MainContent() {
                       onClick={() => setSelectedPerson(person)}
                     >
                       <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={person.pinned ?? false}
-                        onChange={async (e) => {
-                          e.stopPropagation();
-                          const newPinned = e.target.checked;
-                          try {
-                            await updatePinnedStatus(person._id, newPinned);
-                            await refreshPeople(setPeople); // reload people from DB
-                          } catch (err) {
-                            console.error("Failed to update pinned state:", err);
-                          }
-                        }}
-                      />
+                        <input
+                          type="checkbox"
+                          checked={person.pinned ?? false}
+                          onChange={async (e) => {
+                            e.stopPropagation();
+                            const newPinned = e.target.checked;
+                            try {
+                              await updatePinnedStatus(person._id, newPinned);
+                              await refreshPeople(setPeople); // reload people from DB
+                            } catch (err) {
+                              console.error(
+                                "Failed to update pinned state:",
+                                err
+                              );
+                            }
+                          }}
+                        />
                         <Image
                           src={person.avatarUrl || "/default-avatar.png"}
                           alt={person.name}
@@ -193,23 +242,31 @@ export default function MainContent() {
                         />
                         <div className="text-left">
                           <div className="font-semibold">{person.name}</div>
-                          <div className="text-sm text-gray-600">Age: {age}</div>
-                          {person.categories && person.categories.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {person.categories.map((catRef) => {
-                                const matching = allCategories.find((c) => c._id === catRef._id);
-                                return (
-                                  <span
-                                    key={catRef._id}
-                                    className="px-1.5 py-0.5 rounded text-white text-xs font-medium"
-                                    style={{ backgroundColor: matching?.color || "#888" }}
-                                  >
-                                    {matching?.name || "Unknown"}
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          )}
+                          <div className="text-sm text-gray-600">
+                            Age: {age}
+                          </div>
+                          {person.categories &&
+                            person.categories.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {person.categories.map((catRef) => {
+                                  const matching = allCategories.find(
+                                    (c) => c._id === catRef._id
+                                  );
+                                  return (
+                                    <span
+                                      key={catRef._id}
+                                      className="px-1.5 py-0.5 rounded text-white text-xs font-medium"
+                                      style={{
+                                        backgroundColor:
+                                          matching?.color || "#888",
+                                      }}
+                                    >
+                                      {matching?.name || "Unknown"}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
                         </div>
                       </div>
                       <div className="text-center">
@@ -217,7 +274,9 @@ export default function MainContent() {
                           {person.birthdayThisYear.format("MMM D")}
                         </div>
                       </div>
-                      <div className="text-right text-sm text-gray-700">{daysLabel}</div>
+                      <div className="text-right text-sm text-gray-700">
+                        {daysLabel}
+                      </div>
                     </li>
                   );
                 })}
@@ -274,29 +333,36 @@ export default function MainContent() {
                 <strong>Notes:</strong> {selectedPerson.notes}
               </p>
 
-              {selectedPerson.categories && selectedPerson.categories.length > 0 && (
-                <div className="mt-4">
-                  <strong>Tags:</strong>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    {selectedPerson.categories.map((catRef) => {
-                      const matching = allCategories.find((c) => c._id === catRef._id);
-                      return (
-                        <span
-                          key={catRef._id}
-                          className="px-2 py-1 rounded text-white text-sm"
-                          style={{ backgroundColor: matching?.color || "#888" }}
-                        >
-                          {matching?.name || "Unknown"}
-                        </span>
-                      );
-                    })}
+              {selectedPerson.categories &&
+                selectedPerson.categories.length > 0 && (
+                  <div className="mt-4">
+                    <strong>Tags:</strong>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {selectedPerson.categories.map((catRef) => {
+                        const matching = allCategories.find(
+                          (c) => c._id === catRef._id
+                        );
+                        return (
+                          <span
+                            key={catRef._id}
+                            className="px-2 py-1 rounded text-white text-sm"
+                            style={{
+                              backgroundColor: matching?.color || "#888",
+                            }}
+                          >
+                            {matching?.name || "Unknown"}
+                          </span>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
           </div>
         ) : (
-          <p className="text-gray-600">Select a person to view their details.</p>
+          <p className="text-gray-600">
+            Select a person to view their details.
+          </p>
         )}
       </section>
 
