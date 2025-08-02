@@ -17,16 +17,15 @@ interface CategoryType {
 }
 
 export default function Sidebar() {
+  const { status } = useSession();
+  const [, setLoading] = useState(true);
   const [categories, setCategories] = useState<CategoryType[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit">("add");
   const [selectedCategory, setSelectedCategory] = useState<CategoryType | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [filtersActive, setFiltersActive] = useState(false);
-  const { status } = useSession();
-
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -115,12 +114,12 @@ export default function Sidebar() {
       setCategories((prev) => prev.filter((cat) => cat._id !== id));
     }
   };
-
-  if (loading) {
-    return <aside className="w-64 p-4 border-r border-teal bg-lavender">Loading...</aside>;
+  
+  if (status === "unauthenticated") {
+    return null;
   }
-    if (status === "unauthenticated") {
-    return null; // Don’t show anything if not logged in
+  if (status === "loading") {
+  return <div className="p-4 text-center">Loading...</div>;
   }
 
 return (

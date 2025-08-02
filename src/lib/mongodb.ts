@@ -11,7 +11,7 @@ declare global {
   var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
-if (process.env.NODE_ENV !== "production") {
+if (process.env.NODE_ENV !== "development") {
   if (!global._mongoClientPromise) {
     global._mongoClientPromise = client.connect();
   }
