@@ -130,12 +130,16 @@ return (
         <div className="flex gap-2">
           <button
             onClick={openAddModal}
+            aria-label="Add Category"
+            title="Add Category"
             className="p-1 bg-teal text-white rounded hover:bg-teal/80"
           >
             <Plus size={18} />
           </button>
           <button
             onClick={openEditDialog}
+            aria-label="Edit Categories"
+            title="Edit Categories"
             className="p-1 bg-gray-300 text-black rounded hover:bg-gray-400"
           >
             <Pencil size={18} />

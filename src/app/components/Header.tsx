@@ -19,7 +19,7 @@ export default function Header() {
           height={40}
           className="object-contain"
         />
-        <h1 className="text-xl font-bold text-teal">CakeMe</h1>
+        <h1 className="text-xl font-bold text-teal-700">CakeMe</h1>
       </div>
 
       {/* User Greeting and Auth Buttons */}
@@ -32,7 +32,7 @@ export default function Header() {
             </span>
             <button
               onClick={() => signOut()}
-              className="px-4 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded"
+              className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded"
             >
               Logout
             </button>
