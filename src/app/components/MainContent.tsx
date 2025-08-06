@@ -168,6 +168,10 @@ export default function MainContent() {
 
   // === Render ===
 
+  console.log("Display count:", displayCount);
+  console.log("Upcoming birthdays (pre-pinned sort):", upcoming);
+  console.log("Combined list (after pinned sort):", combinedList);  
+
   return (
     <main className="flex flex-1 overflow-hidden">
       {/* Left Column: List View */}
@@ -262,10 +266,7 @@ export default function MainContent() {
               <h3 className="text-md font-bold text-teal-800 mb-2">{month}</h3>
               <ul key={displayCount} className="space-y-4">
                 {peopleInMonth.map((person) => {
-                  const age = person.birthdayThisYear.diff(
-                    dayjs(person.birthday),
-                    "year"
-                  );
+                  const age = dayjs().diff(dayjs(person.birthday), "year");
                   const daysUntil = person.birthdayThisYear.diff(today, "day");
                   const daysLabel = person.birthdayThisYear.isToday()
                     ? "Today"
@@ -347,7 +348,7 @@ export default function MainContent() {
       </section>
 
       {/* Right Column: Person Details */}
-      <section className="w-1/2 p-4 overflow-y-auto bg-lavender">
+      <section className="w-1/2 max-h-[calc(100vh-200px)] overflow-y-auto p-4 bg-lavender">
         {selectedPerson ? (
           <PersonDetails
             person={selectedPerson}
@@ -360,7 +361,7 @@ export default function MainContent() {
             onDelete={handleDelete}
           />
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
+          <div className="flex flex-col items-center justify-start min-h-full pt-10">
             <Image
               src="/empty-state.png"
               alt="No birthday selected"
