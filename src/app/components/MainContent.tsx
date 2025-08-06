@@ -1,4 +1,4 @@
-"use client"; // Enables client-side rendering
+"use client";
 
 import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
@@ -32,7 +32,7 @@ export default function MainContent() {
   const [people, setPeople] = useState<Person[]>([]);
   const [selectedPerson, setSelectedPerson] =
     useState<PersonWithBirthday | null>(null);
-  const [displayCount, setDisplayCount] = useState(4);
+  const [displayCount, setDisplayCount] = useState<number | "all">(4);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [showAddModal, setShowAddForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -119,9 +119,10 @@ export default function MainContent() {
       people: peopleWithBirthday,
       today,
       activeCategory,
-      displayCount,
+      displayCount: displayCount === "all" ? undefined : displayCount,
     });
   }, [peopleWithBirthday, today, activeCategory, displayCount]);
+
 
   // Ensure pinned birthdays appear at the top
   const combinedList = useMemo(() => {
@@ -205,17 +206,28 @@ export default function MainContent() {
             />
           </div>
           {/* Select count of birthdays to display */}
-          <select
-            className="border p-1 text-sm rounded"
-            value={displayCount}
-            onChange={(e) => setDisplayCount(Number(e.target.value))}
-          >
-            {[4, 6, 8, 10].map((n) => (
-              <option key={n} value={n}>
-                {n} shown
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            <label htmlFor="display-count" className="sr-only">
+              Number of birthdays to show
+            </label>
+            <select
+              id="display-count"
+              className="border p-1 text-sm rounded"
+              value={displayCount}
+              onChange={(e) => {
+                const val = e.target.value;
+                setDisplayCount(val === "all" ? "all" : Number(val));
+              }}
+            >
+              {[4, 6, 8, 10].map((n) => (
+                <option key={n} value={n}>
+                  Show {n}
+                </option>
+              ))}
+              <option value="all">Show all</option>
+            </select>
+          </div>
+
 
           {/* Open add birthday modal */}
           <button
@@ -224,10 +236,18 @@ export default function MainContent() {
               setSelectedPerson(null);
               setShowAddForm(true);
             }}
-            className="px-3 py-1 text-sm bg-teal text-white rounded hover:bg-teal/80"
+            className="px-3 py-1 text-sm rounded border"
+            style={{
+              backgroundColor: '#2F6F9F',
+              color: '#ffffff',
+              zIndex: 10,
+              position: 'relative',
+            }}
           >
             + Add Birthday
           </button>
+
+
         </div>
 
         {/* No people found */}
@@ -239,7 +259,7 @@ export default function MainContent() {
           // Render birthdays grouped by month
           Object.entries(groupedByMonth).map(([month, peopleInMonth]) => (
             <div key={month} className="mb-6">
-              <h3 className="text-md font-bold text-teal mb-2">{month}</h3>
+              <h3 className="text-md font-bold text-teal-800 mb-2">{month}</h3>
               <ul key={displayCount} className="space-y-4">
                 {peopleInMonth.map((person) => {
                   const age = person.birthdayThisYear.diff(
@@ -257,8 +277,8 @@ export default function MainContent() {
                       className="border border-teal rounded p-4 flex items-center justify-between cursor-pointer hover:bg-teal/25"
                       onClick={() => setSelectedPerson(person)}
                     >
-                      <div className="flex items-center gap-3">
-                        {/* Pin checkbox */}
+                      {/* Left section: fixed width to prevent shifting */}
+                      <div className="flex items-start gap-3 w-full max-w-[300px]">
                         <input
                           type="checkbox"
                           checked={person.pinned ?? false}
@@ -267,15 +287,13 @@ export default function MainContent() {
                             const newPinned = e.target.checked;
                             try {
                               await updatePinnedStatus(person._id, newPinned);
-                        {/* Avatar image */}
-                              await refreshPeople(setPeople); // reload people from DB
+                              await refreshPeople(setPeople);
                             } catch (err) {
-                              console.error(
-                                "Failed to update pinned state:",
-                                err
-                              );
+                              console.error("Failed to update pinned state:", err);
                             }
                           }}
+                          aria-label={`Pin ${person.name}`}
+                          title={`Pin ${person.name}`}
                         />
                         <Image
                           src={avatarUrls[person._id] || "/default-avatar.png"}
@@ -286,43 +304,40 @@ export default function MainContent() {
                         />
                         <div className="text-left">
                           <div className="font-semibold">{person.name}</div>
-                          {/* Category badges */}
-                          <div className="text-sm text-gray-600">
-                            Age: {age}
-                          </div>
-                          {person.categories &&
-                            person.categories.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {person.categories.map((catRef) => {
-                                  const matching = allCategories.find(
-                                    (c) => c._id === catRef._id
-                                  );
-                                  return (
-                                    <span
-                                      key={catRef._id}
-                                      className="px-1.5 py-0.5 rounded text-white text-xs font-medium"
-                                      style={{
-                                        backgroundColor:
-                                          matching?.color || "#888",
-                                      }}
-                                    >
-                                      {matching?.name || "Unknown"}
-                                    </span>
-                                  );
-                                })}
-                              </div>
-                            )}
+                          <div className="text-sm text-gray-600">Age: {age}</div>
+                          {(person.categories?.length ?? 0) > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {person.categories?.map((catRef) => {
+                                const matching = allCategories.find((c) => c._id === catRef._id);
+                                return (
+                                  <span
+                                    key={catRef._id}
+                                    className="px-1.5 py-0.5 rounded text-white text-xs font-medium"
+                                    style={{ backgroundColor: matching?.color || "#888" }}
+                                  >
+                                    {matching?.name || "Unknown"}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       </div>
-                      <div className="text-center">
-                        <div className="text-teal font-semibold">
+
+                      {/* Middle: Date - fix width for alignment */}
+                      <div className="text-center w-[70px] shrink-0">
+                        <div className="text-teal-800 font-semibold">
                           {person.birthdayThisYear.format("MMM D")}
                         </div>
                       </div>
-                      <div className="text-right text-sm text-gray-700">
+
+                      {/* Right: Days until */}
+                      <div className="text-right text-sm text-gray-700 w-[80px] shrink-0">
                         {daysLabel}
                       </div>
                     </li>
+
+
                   );
                 })}
               </ul>
@@ -345,9 +360,16 @@ export default function MainContent() {
             onDelete={handleDelete}
           />
         ) : (
-          <p className="text-gray-600">
-            Select a person to view their details.
-          </p>
+          <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
+            <Image
+              src="/empty-state.png"
+              alt="No birthday selected"
+              width={500}
+              height={500}
+              priority
+              className="mb-4 opacity-80"
+            />
+          </div>
         )}
       </section>
 
