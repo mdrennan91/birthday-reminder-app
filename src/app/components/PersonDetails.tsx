@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import { PersonWithBirthday } from "@/types";
+import dayjs from "dayjs";
+
 
 // Define the expected props for the component
 type Props = {
@@ -56,11 +58,32 @@ export default function PersonDetails({
       {/* Person details: birthday, phone, email, etc. */}
       <div className="text-gray-700 space-y-2 text-center">
         {/* Display fields/p tags if exist */}
-        {person.birthday && (
-          <p>
-            <strong>Birthday:</strong> {person.birthday}
-          </p>
-        )}
+        {person.birthday && (() => {
+          const birthday = dayjs(person.birthday);
+          const today = dayjs();
+
+          let birthdayThisYear = birthday.year(today.year());
+          if (birthdayThisYear.isBefore(today, "day")) {
+            birthdayThisYear = birthdayThisYear.add(1, "year");
+          }
+
+          const currentAge = today.diff(birthday, "year");
+          const age = currentAge + 1;
+          const daysUntil = birthdayThisYear.diff(today, "day");
+          const formattedBirthday = birthday.format("MM/DD/YYYY");
+
+          return (
+            <>
+              <p className="font-semibold text-black">
+                {person.name} is turning {age} in {daysUntil === 0 ? "today!" : `${daysUntil} day${daysUntil !== 1 ? "s" : ""}`}.
+              </p>
+              <p>
+                <strong>Birthday:</strong> {formattedBirthday}
+              </p>
+            </>
+          );
+        })()}
+
         {person.phone && (
           <p>
             <strong>Phone:</strong> {person.phone}

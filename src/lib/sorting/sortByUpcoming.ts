@@ -10,7 +10,7 @@ export function sortByUpcoming({
   people,
   today,
   activeCategory = null,
-  displayCount = 4,
+  displayCount,
 }: {
   people: Person[];
   today: dayjs.Dayjs;
@@ -46,5 +46,7 @@ export function sortByUpcoming({
   );
 
   // Return only the top N
-  return sorted.slice(0, displayCount);
+  return typeof displayCount === "number"
+    ? sorted.slice(0, displayCount)
+    : sorted;
 }
