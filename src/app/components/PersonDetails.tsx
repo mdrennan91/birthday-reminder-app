@@ -28,19 +28,24 @@ export default function PersonDetails({
   const [errorMessage, setErrorMessage] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
+  
   const handleConfirmDelete = async () => {
     try {
       setIsDeleting(true);
       await onDelete();
       setConfirmOpen(false); // close modal
-    } catch (err: any) {
-      setErrorMessage(err.message || "Something went wrong.");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setErrorMessage(err.message);
+      } else {
+        setErrorMessage("Something went wrong.");
+      }
       setErrorOpen(true);
     } finally {
       setIsDeleting(false);
     }
   };
+
 
   return (
     <div>
