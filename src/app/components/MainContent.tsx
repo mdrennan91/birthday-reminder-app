@@ -20,6 +20,7 @@ import { updatePinnedStatus } from "@/lib/api/updatePinnedStatus";
 import { useSignedAvatars } from "@/lib/helper/useSignedAvatars";
 import PersonDetails from "./PersonDetails";
 import DeleteConfirmationDialog from "./DeleteConfirmationDialog";
+import ErrorDialog from "./ErrorDialog";
 
 dayjs.extend(isToday);
 
@@ -46,6 +47,9 @@ export default function MainContent() {
   const today = dayjs();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [errorOpen, setErrorOpen] = useState(false);
+
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -105,7 +109,9 @@ export default function MainContent() {
 
   const groupedByMonth = useMemo(() => groupByMonth(combinedList), [combinedList]);
 
-  const requestDelete = () => setShowDeleteDialog(true);
+  const requestDelete = async (): Promise<void> => {
+    setShowDeleteDialog(true);
+  };
 
   const confirmDelete = async () => {
     if (!selectedPerson) return;
@@ -117,7 +123,8 @@ export default function MainContent() {
       setSelectedPerson(null);
     } catch (err) {
       console.error("Error deleting birthday:", err);
-      alert("Failed to delete birthday.");
+      setErrorMessage("Failed to delete birthday.");
+      setErrorOpen(true);
     } finally {
       setIsDeleting(false);
       setShowDeleteDialog(false);
@@ -344,6 +351,12 @@ export default function MainContent() {
           isLoading={isDeleting}
         />
       )}
+      {/* Error Dialog */}
+      <ErrorDialog
+        open={errorOpen}
+        message={errorMessage}
+        onClose={() => setErrorOpen(false)}
+      />
     </main>
   );
 }

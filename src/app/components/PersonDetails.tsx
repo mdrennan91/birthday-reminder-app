@@ -1,21 +1,21 @@
-"use client"; 
+"use client";
 
 import Image from "next/image";
 import dayjs from "dayjs";
+import { useState } from "react";
 import { PersonWithBirthday } from "@/types";
+import ErrorDialog from "./ErrorDialog";
+import DeleteConfirmationDialog from "./DeleteConfirmationDialog";
 
-
-// Define the expected props for the component
 type Props = {
-  person: PersonWithBirthday; // The person whose details are displayed
-  allCategories: { _id: string; name: string; color: string }[]; // All available categories/tags for lookup
-  avatarUrl: string | undefined; // URL of the person's avatar image
-  onEdit: () => void; // Callback for the Edit button
-  onDelete: () => void; // Callback for the Delete button
-  onClose: () => void; // Callback for closing the panel
+  person: PersonWithBirthday;
+  allCategories: { _id: string; name: string; color: string }[];
+  avatarUrl: string | undefined;
+  onEdit: () => void;
+  onDelete: () => Promise<void>;
+  onClose: () => void;
 };
 
-// Component to display detailed information about a person
 export default function PersonDetails({
   person,
   allCategories,
@@ -24,14 +24,47 @@ export default function PersonDetails({
   onDelete,
   onClose,
 }: Props) {
+  const [errorOpen, setErrorOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    try {
+      setIsDeleting(true);
+      await onDelete();
+      setConfirmOpen(false); // close modal
+    } catch (err: any) {
+      setErrorMessage(err.message || "Something went wrong.");
+      setErrorOpen(true);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div>
-      {/* Header with person's name and action buttons */}
+      {/* Error Dialog */}
+      <ErrorDialog
+        open={errorOpen}
+        message={errorMessage}
+        onClose={() => setErrorOpen(false)}
+      />
+
+      {/* Confirmation Modal */}
+      <DeleteConfirmationDialog
+        open={confirmOpen}
+        personName={person.name}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+      />
+
+      {/* Header with name and buttons */}
       <div className="flex items-start mb-4 relative">
         <h2 className="text-xl font-bold absolute left-1/2 -translate-x-1/2">
           {person.name}
         </h2>
-        {/* Edit and Delete buttons */}
         <div className="space-x-2 ml-auto">
           <button
             onClick={onEdit}
@@ -40,7 +73,7 @@ export default function PersonDetails({
             Edit Details
           </button>
           <button
-            onClick={onDelete}
+            onClick={() => setConfirmOpen(true)}
             className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
           >
             Delete Person
