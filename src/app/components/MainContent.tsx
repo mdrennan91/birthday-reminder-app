@@ -225,7 +225,10 @@ export default function MainContent() {
                 {peopleInMonth.map((person) => {
                   const age = dayjs().diff(dayjs(person.birthday), "year");
                   const daysUntil = person.birthdayThisYear.diff(today, "day");
-                  const daysLabel = person.birthdayThisYear.isToday() ? "Today" : `${daysUntil} days`;
+                  const adjustedDaysUntil = person.birthdayThisYear.isToday() ? 0 : daysUntil + 1;
+                  const daysLabel = adjustedDaysUntil === 0
+                    ? "Today"
+                    : `${adjustedDaysUntil} day${adjustedDaysUntil !== 1 ? "s" : ""}`;
 
                   return (
                     <li
