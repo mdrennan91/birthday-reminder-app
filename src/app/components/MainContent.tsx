@@ -21,6 +21,7 @@ import { useSignedAvatars } from "@/lib/helper/useSignedAvatars";
 import PersonDetails from "./PersonDetails";
 import DeleteConfirmationDialog from "./DeleteConfirmationDialog";
 import ErrorDialog from "./ErrorDialog";
+import { supabase } from "@/lib/supabase";
 
 dayjs.extend(isToday);
 
@@ -118,7 +119,22 @@ export default function MainContent() {
 
     setIsDeleting(true);
     try {
+      // 1. Delete from Supabase Storage
+      const avatarPath = `avatars/${selectedPerson._id}.webp`; // Adjust the path/extension if needed
+      const { error: storageError } = await supabase.storage
+        .from("avatars")
+        .remove([avatarPath]);
+
+      if (storageError) {
+        console.error("Failed to delete avatar:", storageError.message);
+        setErrorMessage("Failed to delete avatar image.");
+        setErrorOpen(true);
+      }
+
+      // 2. Delete birthday record from database
       await deleteBirthday(selectedPerson._id);
+
+      // 3. Refresh and close
       await refreshPeople(setPeople);
       setSelectedPerson(null);
     } catch (err) {
