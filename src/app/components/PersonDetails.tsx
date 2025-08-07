@@ -3,6 +3,8 @@
 import Image from "next/image";
 import dayjs from "dayjs";
 import { PersonWithBirthday } from "@/types";
+import dayjs from "dayjs";
+
 
 // Define the expected props for the component
 type Props = {
@@ -60,7 +62,9 @@ export default function PersonDetails({
 
       {/* Person details: birthday, phone, email, etc. */}
       <div className="text-gray-700 space-y-2 text-center">
+        
         {/* Custom birthday age logic */}
+
         {person.birthday && (() => {
           const birthday = dayjs(person.birthday);
           const today = dayjs();
@@ -78,7 +82,9 @@ export default function PersonDetails({
           return (
             <>
               <p className="font-semibold text-black">
-                {person.name} is turning {age} {daysUntil === 0 ? "today!" : `in ${daysUntil} day${daysUntil !== 1 ? "s" : ""}`}.
+
+                {person.name} is turning {age} in {daysUntil === 0 ? "today!" : `${daysUntil} day${daysUntil !== 1 ? "s" : ""}`}.
+
               </p>
               <p>
                 <strong>Birthday:</strong> {formattedBirthday}
