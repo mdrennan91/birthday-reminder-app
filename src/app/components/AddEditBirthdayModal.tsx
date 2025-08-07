@@ -58,7 +58,7 @@ export default function AddBirthdayModal({
             onUpdated={(person) => {
               onUpdated?.(person);
               setPersonIdForUpload(person._id);
-              setShowUploadPrompt(true);
+              setShowUploadPrompt(false);
             }}
           />
         </div>
