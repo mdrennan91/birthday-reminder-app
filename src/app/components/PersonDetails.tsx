@@ -3,7 +3,6 @@
 import Image from "next/image";
 import dayjs from "dayjs";
 import { PersonWithBirthday } from "@/types";
-import dayjs from "dayjs";
 
 
 // Define the expected props for the component
