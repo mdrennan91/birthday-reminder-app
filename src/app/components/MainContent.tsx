@@ -32,7 +32,7 @@ const LazyImage = dynamic(() => import("next/image"), {
 
 export default function MainContent() {
   const { status } = useSession();
-
+  const [today, setToday] = useState<dayjs.Dayjs | null>(null);
   const [people, setPeople] = useState<Person[]>([]);
   const [selectedPerson, setSelectedPerson] = useState<PersonWithBirthday | null>(null);
   const [displayCount, setDisplayCount] = useState<number | "all">(4);
@@ -44,12 +44,14 @@ export default function MainContent() {
   const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
   const avatarUrls = useSignedAvatars(people);
-  const today = dayjs();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [errorOpen, setErrorOpen] = useState(false);
 
+  useEffect(() => {
+    setToday(dayjs());
+  }, []);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -94,12 +96,14 @@ export default function MainContent() {
     return () => window.removeEventListener("categoryUpdated", handleCategoryUpdate);
   }, []);
 
-  const peopleWithBirthday = useMemo(() => addBirthdayThisYear(people, today), [people, today]);
+  const todaySafe = useMemo(() => today ?? dayjs(), [today]);
+
+  const peopleWithBirthday = useMemo(() => addBirthdayThisYear(people, todaySafe), [people, todaySafe]);
 
   const upcoming = useMemo(() => {
     return sortByUpcoming({
       people: peopleWithBirthday,
-      today,
+      today: today ?? dayjs(),
       activeCategory,
       displayCount: displayCount === "all" ? undefined : displayCount,
     });
@@ -131,16 +135,18 @@ export default function MainContent() {
     }
   };
 
+  if (!today) return null; 
+   
   if (status === "unauthenticated") return null;
   if (status === "loading") return <div className="p-4 text-center">Loading...</div>;
 
-  console.log("Display count:", displayCount);
-  console.log("Upcoming birthdays (pre-pinned sort):", upcoming);
-  console.log("Combined list (after pinned sort):", combinedList);
+  // console.log("Display count:", displayCount);
+  // console.log("Upcoming birthdays (pre-pinned sort):", upcoming);
+  // console.log("Combined list (after pinned sort):", combinedList);
 
-  console.log("Display count:", displayCount);
-  console.log("Upcoming birthdays (pre-pinned sort):", upcoming);
-  console.log("Combined list (after pinned sort):", combinedList);
+  // console.log("Display count:", displayCount);
+  // console.log("Upcoming birthdays (pre-pinned sort):", upcoming);
+  // console.log("Combined list (after pinned sort):", combinedList);
 
   return (
     <main className="flex flex-1 overflow-hidden">
