@@ -126,7 +126,7 @@ return (
     <aside className="w-64 p-4 border-r border-teal bg-lavender flex flex-col ">
       {/* Header controls */}
       <div className="flex justify-between items-center mb-4">
-        <div className="font-extrabold text-xl">Categories</div>
+        <div className="font-extrabold text-xl">Filter Categories</div>
         <div className="flex gap-2">
           <button
             onClick={openAddModal}

@@ -1,63 +1,77 @@
-"use client"; // Ensures this is a client-side component in a Next.js App Router project
+"use client";
 
 import { useState } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
 import AvatarUploader from "./AvatarUploader";
 import Image from "next/image";
 
-// This component wraps AvatarUploader in a styled dialog box
 export default function AvatarUploadDialog({
   personId,
   onUploadComplete,
 }: {
-  personId: string;               // The ID of the person to associate the avatar with
-  onUploadComplete: () => void;  // Callback to trigger when upload is completed
+  personId: string;
+  onUploadComplete: () => void;
 }) {
-  // Local state to manage preview and confirmation UI
   const [uploadedAvatarUrl, setUploadedAvatarUrl] = useState<string | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [open, setOpen] = useState(true); // Keeps dialog open while preview is showing
 
-  // Handle successful upload from AvatarUploader
+  // Handle successful upload
   const handleUpload = (_filename: string, signedUrl: string) => {
-    setUploadedAvatarUrl(signedUrl);           // Store the signed image URL for preview
-    setShowPreview(true);                      // Show preview image
-    setUploadMessage("Avatar uploaded successfully!"); // Display confirmation message
+    setUploadedAvatarUrl(signedUrl);
+    setUploadMessage("Avatar uploaded successfully!");
 
-    // Automatically close the dialog after a short delay
+    // Blur any focused element before hiding modal to avoid aria-hidden warning
     setTimeout(() => {
-      onUploadComplete();                      // Notify parent component upload is done
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      setOpen(false);
+      onUploadComplete();
     }, 1500);
   };
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-lg w-full max-w-md mx-auto">
-      {/* Dialog title and accessibility label */}
-      <h2 className="text-lg font-semibold mb-4 text-center">Upload Avatar</h2>
-      <p className="sr-only">Upload a profile image for the newly added person.</p>
+    <Dialog.Root open={open} onOpenChange={(o) => !o && onUploadComplete()}>
+      <Dialog.DialogPortal>
+        <Dialog.DialogOverlay className="fixed inset-0 bg-black/50 z-50" />
+        <Dialog.DialogContent
+          aria-describedby="avatar-upload-description"
+          className="fixed z-50 bg-white rounded-lg shadow-lg p-6 w-[90vw] max-w-md top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 focus:outline-none"
+        >
+          <Dialog.DialogTitle className="text-lg font-semibold text-center mb-2">
+            Upload Avatar
+          </Dialog.DialogTitle>
+          <Dialog.DialogDescription id="avatar-upload-description" className="sr-only">
+            Upload a profile image for the newly added person.
+          </Dialog.DialogDescription>
 
-      {/* AvatarUploader handles actual upload and invokes handleUpload on success */}
-      <AvatarUploader personId={personId} onUpload={handleUpload} />
-
-      {/* Show uploaded avatar preview if available */}
-      {showPreview && uploadedAvatarUrl && (
-        <div className="mt-4 flex flex-col items-center">
-          <p className="text-sm text-gray-600 mb-2">Preview:</p>
-          <Image
-            src={uploadedAvatarUrl}
-            alt="Uploaded avatar preview"
-            width={96}
-            height={96}
-            className="rounded-full object-cover border shadow"
+          <AvatarUploader
+            personId={personId}
+            onUpload={handleUpload}
+            onClose={() => setOpen(false)}
           />
-        </div>
-      )}
 
-      {/* Upload confirmation message */}
-      {uploadMessage && (
-        <div className="mt-4 text-center text-green-600 font-medium">
-          {uploadMessage}
-        </div>
-      )}
-    </div>
+          {uploadedAvatarUrl && (
+            <div className="mt-4 flex flex-col items-center">
+              <p className="text-sm text-gray-600 mb-2">Preview:</p>
+              <Image
+                src={uploadedAvatarUrl}
+                alt="Uploaded avatar preview"
+                width={96}
+                height={96}
+                className="rounded-full object-cover border shadow"
+              />
+            </div>
+          )}
+
+          {uploadMessage && (
+            <div className="mt-4 text-center text-green-600 font-medium">
+              {uploadMessage}
+            </div>
+          )}
+        </Dialog.DialogContent>
+      </Dialog.DialogPortal>
+    </Dialog.Root>
   );
 }
