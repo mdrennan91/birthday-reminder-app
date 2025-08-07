@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import dayjs from "dayjs";
 import isToday from "dayjs/plugin/isToday";
 import { useSession } from "next-auth/react";
@@ -24,6 +25,10 @@ dayjs.extend(isToday);
 
 // Custom DOM event name for category filtering
 const CATEGORY_FILTER_EVENT = "filter-category";
+
+const LazyImage = dynamic(() => import("next/image"), {
+  loading: () => <div>Loading...</div>,
+});
 
 export default function MainContent() {
   const { status } = useSession();
@@ -51,10 +56,12 @@ export default function MainContent() {
   // Fetch people after login
   useEffect(() => {
     if (status === "authenticated") {
-      fetchBirthdays().then((birthdays) => {
-        setAllPeople(birthdays);
-        setPeople(birthdays);
-      }).catch(console.error);
+      fetchBirthdays()
+        .then((birthdays) => {
+          setAllPeople(birthdays);
+          setPeople(birthdays);
+        })
+        .catch(console.error);
     }
   }, [status]);
 
@@ -123,12 +130,10 @@ export default function MainContent() {
     });
   }, [peopleWithBirthday, today, activeCategory, displayCount]);
 
-
   // Ensure pinned birthdays appear at the top
   const combinedList = useMemo(() => {
     return sortPinnedFirst(upcoming);
   }, [upcoming]);
-
 
   // Group by month for visual grouping
   const groupedByMonth = useMemo(() => {
@@ -170,7 +175,7 @@ export default function MainContent() {
 
   console.log("Display count:", displayCount);
   console.log("Upcoming birthdays (pre-pinned sort):", upcoming);
-  console.log("Combined list (after pinned sort):", combinedList);  
+  console.log("Combined list (after pinned sort):", combinedList);
 
   return (
     <main className="flex flex-1 overflow-hidden">
@@ -232,7 +237,6 @@ export default function MainContent() {
             </select>
           </div>
 
-
           {/* Open add birthday modal */}
           <button
             onClick={() => {
@@ -242,16 +246,14 @@ export default function MainContent() {
             }}
             className="px-3 py-1 text-sm rounded border"
             style={{
-              backgroundColor: '#2F6F9F',
-              color: '#ffffff',
+              backgroundColor: "#2F6F9F",
+              color: "#ffffff",
               zIndex: 10,
-              position: 'relative',
+              position: "relative",
             }}
           >
             + Add Birthday
           </button>
-
-
         </div>
 
         {/* No people found */}
@@ -290,7 +292,10 @@ export default function MainContent() {
                               await updatePinnedStatus(person._id, newPinned);
                               await refreshPeople(setPeople);
                             } catch (err) {
-                              console.error("Failed to update pinned state:", err);
+                              console.error(
+                                "Failed to update pinned state:",
+                                err
+                              );
                             }
                           }}
                           aria-label={`Pin ${person.name}`}
@@ -301,20 +306,27 @@ export default function MainContent() {
                           alt={person.name}
                           width={40}
                           height={40}
-                          className="rounded-full border border-teal"
+                          className="rounded-full aspect-square object-cover border border-teal"
                         />
                         <div className="text-left">
                           <div className="font-semibold">{person.name}</div>
-                          <div className="text-sm text-gray-600">Age: {age}</div>
+                          <div className="text-sm text-gray-600">
+                            Age: {age}
+                          </div>
                           {(person.categories?.length ?? 0) > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1">
                               {person.categories?.map((catRef) => {
-                                const matching = allCategories.find((c) => c._id === catRef._id);
+                                const matching = allCategories.find(
+                                  (c) => c._id === catRef._id
+                                );
                                 return (
                                   <span
                                     key={catRef._id}
                                     className="px-1.5 py-0.5 rounded text-white text-xs font-medium"
-                                    style={{ backgroundColor: matching?.color || "#888" }}
+                                    style={{
+                                      backgroundColor:
+                                        matching?.color || "#888",
+                                    }}
                                   >
                                     {matching?.name || "Unknown"}
                                   </span>
@@ -337,8 +349,6 @@ export default function MainContent() {
                         {daysLabel}
                       </div>
                     </li>
-
-
                   );
                 })}
               </ul>
@@ -362,8 +372,8 @@ export default function MainContent() {
           />
         ) : (
           <div className="flex flex-col items-center justify-start min-h-full pt-10">
-            <Image
-              src="/empty-state.png"
+            <LazyImage
+              src="/empty-state.webp"
               alt="No birthday selected"
               width={500}
               height={500}
