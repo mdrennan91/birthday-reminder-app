@@ -1,23 +1,37 @@
-"use client"; // Marks this as a client-side component in a Next.js App Router project
+"use client";
 
 import Image from "next/image";
 import React, { ChangeEvent, DragEvent, useState } from "react";
 
-// Props: personId is used for upload identification, onUpload is a callback with the uploaded file info
 export default function AvatarUploader({
   personId,
   onUpload,
+  onClose,
 }: {
+  onClose: () => void;
   personId: string;
   onUpload: (filename: string, signedUrl: string) => void;
 }) {
-  // Internal state for drag/drop feedback, selected file, preview URL, and upload status
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Handle file drop from drag-and-drop interaction
+  // Validate file type and size before preview/upload
+  const validateFile = (file: File): string | null => {
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    const maxSize = 2 * 1024 * 1024; // 2 MB
+
+    if (!allowedTypes.includes(file.type)) {
+      return "Only JPG, PNG, or WebP files are allowed.";
+    }
+    if (file.size > maxSize) {
+      return "File must be smaller than 2MB.";
+    }
+    return null;
+  };
+
   const handleDrop = (e: DragEvent) => {
     e.preventDefault();
     setDragActive(false);
@@ -25,26 +39,32 @@ export default function AvatarUploader({
     if (file) handlePreview(file);
   };
 
-  // Handle file selection via the file input element
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) handlePreview(file);
   };
 
-  // Generate a preview URL and store selected file
   const handlePreview = (file: File) => {
+    const error = validateFile(file);
+    if (error) {
+      setErrorMessage(error);
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      return;
+    }
+
+    setErrorMessage(null);
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
   };
 
-  // Upload selected file to the server using FormData and fetch
   const uploadFile = async () => {
     if (!selectedFile) return;
 
-    setUploading(true); // Disable button while uploading
+    setUploading(true);
     const formData = new FormData();
-    formData.append("image", selectedFile); // Append the file under "image" key
-    formData.append("personId", personId);  // Include the person ID in the form data
+    formData.append("image", selectedFile);
+    formData.append("personId", personId);
 
     try {
       const res = await fetch("/api/uploadAvatar", {
@@ -54,15 +74,14 @@ export default function AvatarUploader({
 
       if (res.ok) {
         const data = await res.json();
-        // Call parent component's callback with uploaded file info
         onUpload(data.path, data.signedUrl);
       } else {
         const err = await res.json();
-        alert(`Upload failed: ${err.error || "Unknown error"}`);
+        setErrorMessage(`Upload failed: ${err.error || "Unknown error"}`);
       }
     } catch (err) {
       console.error("Upload error:", err);
-      alert("Upload failed.");
+      setErrorMessage("Upload failed. Please try again.");
     } finally {
       setUploading(false);
     }
@@ -70,14 +89,11 @@ export default function AvatarUploader({
 
   return (
     <div className="border p-4 rounded bg-white">
-      {/* Label for the upload section */}
-      <label className="block font-semibold mb-2">Upload Avatar</label>
-
       {/* Drag-and-drop area */}
       <div
         onDragOver={(e) => {
           e.preventDefault();
-          setDragActive(true); // Highlight border on drag over
+          setDragActive(true);
         }}
         onDragLeave={() => setDragActive(false)}
         onDrop={handleDrop}
@@ -85,18 +101,33 @@ export default function AvatarUploader({
           dragActive ? "border-blue-500 bg-blue-50" : "border-gray-300"
         }`}
       >
-        Drop image here or choose below
+        Drag and Drop image here
       </div>
 
-      {/* File picker input */}
+      <div className="m-2 text-center font-extrabold">OR</div>
+
+      {/* File picker */}
       <input
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp"
         onChange={handleFileChange}
-        className="mt-2"
+        className="ml-8"
       />
 
-      {/* Image preview and upload button (if file is selected) */}
+      {/* Error message */}
+      {errorMessage && (
+        <p className="text-sm text-red-600 text-center mt-2">{errorMessage}</p>
+      )}
+      <div className="mt-4 flex justify-center">
+      <button
+        type="button"
+        onClick={onClose}
+        className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 mt-4"
+      >
+        Cancel
+      </button>
+      </div>
+      {/* Preview and upload button */}
       {previewUrl && (
         <div className="mt-4 flex flex-col items-center">
           <p className="text-sm text-gray-600 mb-2">Preview:</p>

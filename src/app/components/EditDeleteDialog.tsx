@@ -28,10 +28,10 @@ export default function EditDeleteDialog({
   const [editedName, setEditedName] = useState("");
   const [editedColor, setEditedColor] = useState("#000000");
 
-  const startEdit = (category: CategoryType) => {
-    setEditingId(category._id);
-    setEditedName(category.name);
-    setEditedColor(category.color);
+  const startEdit = (cat: CategoryType) => {
+    setEditingId(cat._id);
+    setEditedName(cat.name);
+    setEditedColor(cat.color);
   };
 
   const cancelEdit = () => {
@@ -51,9 +51,21 @@ export default function EditDeleteDialog({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 z-40" />
-        <Dialog.Content className="fixed z-50 bg-white p-6 rounded-lg shadow-lg top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-md">
-          <Dialog.Title className="text-lg font-bold mb-4">Edit or Delete Categories</Dialog.Title>
-          <ul className="space-y-4">
+        <Dialog.Content
+          className="fixed z-50 bg-white p-6 rounded-lg shadow-xl top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-md focus:outline-none"
+          aria-describedby="edit-delete-description"
+        >
+          <Dialog.Title className="text-lg font-bold mb-1">
+            Edit or Delete Categories
+          </Dialog.Title>
+          <Dialog.Description
+            id="edit-delete-description"
+            className="text-sm text-gray-500 mb-4"
+          >
+            Make changes to your categories or remove them.
+          </Dialog.Description>
+
+          <ul className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
             {categories.map((cat) => (
               <li key={cat._id} className="flex items-center gap-2">
                 {editingId === cat._id ? (
@@ -63,6 +75,7 @@ export default function EditDeleteDialog({
                       value={editedName}
                       onChange={(e) => setEditedName(e.target.value)}
                       className="border p-1 rounded w-1/2"
+                      autoFocus
                     />
                     <input
                       type="color"
@@ -72,13 +85,13 @@ export default function EditDeleteDialog({
                     />
                     <button
                       onClick={handleSave}
-                      className="text-sm bg-teal text-white px-2 py-1 rounded"
+                      className="text-sm bg-teal-600 text-white px-2 py-1 rounded hover:bg-teal-700"
                     >
                       Save
                     </button>
                     <button
                       onClick={cancelEdit}
-                      className="text-sm bg-gray-300 px-2 py-1 rounded"
+                      className="text-sm bg-gray-300 px-2 py-1 rounded hover:bg-gray-400"
                     >
                       Cancel
                     </button>
@@ -93,13 +106,13 @@ export default function EditDeleteDialog({
                     </span>
                     <button
                       onClick={() => startEdit(cat)}
-                      className="text-sm bg-blue-500 text-white px-2 py-1 rounded"
+                      className="text-sm bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => onDelete(cat._id)}
-                      className="text-sm bg-red-500 text-white px-2 py-1 rounded"
+                      className="text-sm bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
                     >
                       Delete
                     </button>
@@ -108,7 +121,12 @@ export default function EditDeleteDialog({
               </li>
             ))}
           </ul>
-          <Dialog.Close className="mt-4 text-sm text-blue-600 hover:underline">Close</Dialog.Close>
+
+          <div className="mt-6 text-right">
+            <Dialog.Close className="text-sm text-blue-600 hover:underline">
+              Close
+            </Dialog.Close>
+          </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

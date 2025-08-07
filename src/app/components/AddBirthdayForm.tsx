@@ -1,18 +1,25 @@
-import { useState, useEffect } from "react";
+"use client";
+
+import { useState, useEffect, useRef } from "react";
 import type { Person, PersonWithBirthday } from "@/types";
 import AvatarUploadDialog from "./AvatarUploadDialog";
+import dayjs from "dayjs";
+
+interface AddBirthdayFormProps {
+  onClose: () => void;
+  refreshPeople: () => Promise<void>;
+  personToEdit?: Person | null;
+  onUpdated?: (updatedPerson: PersonWithBirthday) => void;
+}
 
 export default function AddBirthdayForm({
   onClose,
   refreshPeople,
   personToEdit,
   onUpdated,
-}: {
-  onClose: () => void;
-  refreshPeople: () => Promise<void>;
-  personToEdit?: Person | null;
-  onUpdated?: (updatedPerson: PersonWithBirthday) => void;
-}) {
+}: AddBirthdayFormProps) {
+  const isEditMode = !!personToEdit;
+
   const [formData, setFormData] = useState({
     name: "",
     day: "",
@@ -28,88 +35,96 @@ export default function AddBirthdayForm({
   const [availableCategories, setAvailableCategories] = useState<
     { _id: string; name: string; color: string }[]
   >([]);
-
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [newlyCreatedId, setNewlyCreatedId] = useState<string | null>(null);
+  const [personIdForUpload, setPersonIdForUpload] = useState<string | null>(null);
   const [showUploadPrompt, setShowUploadPrompt] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
+  // Fetch categories
   useEffect(() => {
-    async function fetchCategories() {
-      const res = await fetch("/api/categories");
-      if (res.ok) {
-        const data = await res.json();
-        setAvailableCategories(data);
-      }
-    }
-    fetchCategories();
+    fetch("/api/categories")
+      .then((res) => res.ok && res.json())
+      .then((data) => data && setAvailableCategories(data));
   }, []);
 
+  // Populate form if editing
   useEffect(() => {
-    if (personToEdit) {
-      const birthday = new Date(personToEdit.birthday);
-      setFormData({
-        name: personToEdit.name || "",
-        day: birthday.getDate().toString(),
-        month: (birthday.getMonth() + 1).toString(),
-        year: birthday.getFullYear().toString(),
-        phone: personToEdit.phone || "",
-        email: personToEdit.email || "",
-        address: personToEdit.address || "",
-        notes: personToEdit.notes || "",
-        avatarUrl: personToEdit.avatarUrl || "",
-      });
+    if (!personToEdit) return;
 
-      setSelectedCategoryIds(personToEdit.categories?.map((cat) => cat._id) || []);
+    const birthday = dayjs(personToEdit.birthday);
+    if (!birthday.isValid()) {
+      console.error("Invalid birthday:", personToEdit.birthday);
+      return;
     }
+
+    setFormData({
+      name: personToEdit.name ?? "",
+      day: birthday.date().toString(),
+      month: (birthday.month() + 1).toString(), // 0-based in dayjs
+      year: birthday.year().toString(),
+      phone: personToEdit.phone ?? "",
+      email: personToEdit.email ?? "",
+      address: personToEdit.address ?? "",
+      notes: personToEdit.notes ?? "",
+      avatarUrl: personToEdit.avatarUrl ?? "",
+    });
+
+    setSelectedCategoryIds(
+      personToEdit.categories?.map((cat) => cat._id) ?? []
+    );
   }, [personToEdit]);
+
 
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >
   ) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
   };
 
   const validate = () => {
     const newErrors: typeof errors = {};
-    if (Number(formData.day) < 1 || Number(formData.day) > 31)
-      newErrors.day = "Invalid day";
-    if (formData.email.length > 0 && formData.email !== "") {
-      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-      if (!emailRegex.test(formData.email)) {
-        newErrors.email = "Invalid email format";
-      }
-    }
-    if (formData.phone.length > 0 && formData.phone !== "") {
-      const phoneRegex = /^\d{10}$/;
-      if (!phoneRegex.test(formData.phone)) {
-        newErrors.phone = "Invalid phone number format";
-      }
-    }
     const currentYear = new Date().getFullYear();
-    if (
-      Number(formData.year) > currentYear ||
-      Number(formData.year) < currentYear - 150
-    ) {
-      newErrors.year = "Invalid year";
+
+    if (!formData.name.trim()) {
+      newErrors.name = "Name is required";
     }
+
+    if (+formData.month < 1 || +formData.month > 12)
+    newErrors.month = "Invalid month";
+
+    if (+formData.day < 1 || +formData.day > 31) newErrors.day = "Invalid day";
+    if (+formData.year < currentYear - 150 || +formData.year > currentYear)
+      newErrors.year = "Invalid year";
+
+    if (formData.email && !/^[\w.%+-]+@[\w.-]+\.\w{2,}$/.test(formData.email)) {
+      newErrors.email = "Invalid email format";
+    }
+
+    if (formData.phone && !/^\d{10}$/.test(formData.phone)) {
+      newErrors.phone = "Invalid phone number format";
+    }
+
     return newErrors;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    const handleSubmit = async (mode: "exit" | "upload") => {
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
 
-    const year = formData.year.trim();
-    const paddedMonth = formData.month.padStart(2, "0");
-    const paddedDay = formData.day.padStart(2, "0");
-    const birthday = `${year}-${paddedMonth}-${paddedDay}`;
+    const birthday = `${formData.year.trim()}-${formData.month.padStart(
+      2,
+      "0"
+    )}-${formData.day.padStart(2, "0")}`;
 
     const payload = {
       ...formData,
@@ -118,6 +133,7 @@ export default function AddBirthdayForm({
     };
 
     try {
+    
       const res = await fetch(
         personToEdit ? `/api/birthdays/${personToEdit._id}` : "/api/birthdays",
         {
@@ -131,121 +147,126 @@ export default function AddBirthdayForm({
 
       const data = await res.json();
       await refreshPeople();
+      onUpdated?.(data);
 
-      if (personToEdit) {
-        if (onUpdated) onUpdated(data);
+      if (mode === "upload") {
+        setPersonIdForUpload(data._id);
+        setShowUploadPrompt(true);
       } else {
-        await refreshPeople(); // if you weren't already calling this here
+        setShowUploadPrompt(false); // ensure it's never triggered again
+        setPersonIdForUpload(null);
+        onClose();
       }
-
-      setNewlyCreatedId(data._id);
-      setShowUploadPrompt(true);
-
     } catch (err) {
       console.error("Error submitting form:", err);
     }
   };
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <h2 className="text-xl font-bold mb-4">
-        {personToEdit ? "Edit Birthday" : "Add Birthday"}
-      </h2>
 
+  return (
+    <form ref={formRef} className="space-y-4">
+
+      {/* Input Fields (unchanged) */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <input
-            type="text"
-            name="name"
-            placeholder="Name *"
-            value={formData.name}
-            onChange={handleChange}
-            className="w-full p-2 border rounded"
-            required
-          />
-          {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+        <input
+          type="text"
+          name="name"
+          placeholder="Name *"
+          value={formData.name}
+          onChange={handleChange}
+          className="w-full p-2 border rounded"
+          required
+        />
+        {errors.name && (
+          <p className="text-sm text-red-500 mt-1">{errors.name}</p>
+        )}
+        </div>
+        <div>
+        <select
+          name="month"
+          value={formData.month}
+          onChange={handleChange}
+          required
+          className="w-full p-2 border rounded"
+        >
+          <option value="">Month *</option>
+          {Array.from({ length: 12 }, (_, i) => (
+            <option key={i} value={i + 1}>
+              {new Date(0, i).toLocaleString("default", { month: "long" })}
+            </option>
+          ))}
+        </select>
+        {errors.month && (
+          <p className="col-span-2 text-sm text-red-500">{errors.month}</p>
+        )}
         </div>
 
         <div>
-          <select
-            name="month"
-            value={formData.month}
-            onChange={handleChange}
-            required
-            className="w-full p-2 border rounded"
-          >
-            <option value="">Month *</option>
-            {Array.from({ length: 12 }, (_, i) => (
-              <option key={i} value={i + 1}>
-                {new Date(0, i).toLocaleString("default", { month: "long" })}
-              </option>
-            ))}
-          </select>
-          {errors.month && <p className="text-red-500 text-sm">{errors.month}</p>}
+        <input
+          type="number"
+          name="day"
+          placeholder="Day *"
+          value={formData.day}
+          onChange={handleChange}
+          className="w-full p-2 border rounded"
+          required
+        />
+        {errors.day && (
+          <p className="col-span-2 text-sm text-red-500">{errors.day}</p>
+        )}
         </div>
-
         <div>
-          <input
-            type="number"
-            name="day"
-            placeholder="Day *"
-            value={formData.day}
-            onChange={handleChange}
-            className="w-full p-2 border rounded"
-            required
-          />
-          {errors.day && <p className="text-red-500 text-sm">{errors.day}</p>}
+        <input
+          type="number"
+          name="year"
+          placeholder="Year *"
+          value={formData.year}
+          onChange={handleChange}
+          className="w-full p-2 border rounded"
+          required
+        />
+        {errors.year && (
+          <p className="col-span-2 text-sm text-red-500">{errors.year}</p>
+        )}
         </div>
-
         <div>
-          <input
-            type="number"
-            name="year"
-            placeholder="Year *"
-            value={formData.year}
-            onChange={handleChange}
-            className="w-full p-2 border rounded"
-            required
-          />
-          {errors.year && <p className="text-red-500 text-sm">{errors.year}</p>}
+        <input
+          type="text"
+          name="phone"
+          placeholder="Phone"
+          value={formData.phone}
+          onChange={handleChange}
+          className="w-full p-2 border rounded"
+        />
+        {errors.phone && (
+          <p className="col-span-2 text-sm text-red-500">{errors.phone}</p>
+        )}
         </div>
-
         <div>
-          <input
-            type="text"
-            name="phone"
-            placeholder="Phone"
-            value={formData.phone}
-            onChange={handleChange}
-            className="w-full p-2 border rounded"
-          />
-          {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
+        <input
+          type="email"
+          name="email"
+          placeholder="Email"
+          value={formData.email}
+          onChange={handleChange}
+          className="w-full p-2 border rounded"
+        />
+        {errors.email && (
+          <p className="col-span-2 text-sm text-red-500">{errors.email}</p>
+        )}
         </div>
-
         <div>
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            value={formData.email}
-            onChange={handleChange}
-            className="w-full p-2 border rounded"
-          />
-          {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
-        </div>
-
-        <div>
-          <input
-            type="text"
-            name="address"
-            placeholder="Address"
-            value={formData.address}
-            onChange={handleChange}
-            className="w-full p-2 border rounded"
-          />
-        </div>
+        <input
+          type="text"
+          name="address"
+          placeholder="Address"
+          value={formData.address}
+          onChange={handleChange}
+          className="w-full col-span-2 p-2 border rounded"
+        />
       </div>
-
+      <div>
       <textarea
         name="notes"
         placeholder="Notes"
@@ -253,7 +274,7 @@ export default function AddBirthdayForm({
         onChange={handleChange}
         className="w-full p-2 border rounded"
       />
-
+      </div>
       <div>
         <label className="block font-medium mb-1">Categories</label>
         <div className="flex flex-wrap gap-2">
@@ -263,13 +284,11 @@ export default function AddBirthdayForm({
                 type="checkbox"
                 checked={selectedCategoryIds.includes(cat._id)}
                 onChange={(e) => {
-                  if (e.target.checked) {
-                    setSelectedCategoryIds([...selectedCategoryIds, cat._id]);
-                  } else {
-                    setSelectedCategoryIds(
-                      selectedCategoryIds.filter((id) => id !== cat._id)
-                    );
-                  }
+                  setSelectedCategoryIds((prev) =>
+                    e.target.checked
+                      ? [...prev, cat._id]
+                      : prev.filter((id) => id !== cat._id)
+                  );
                 }}
               />
               <span style={{ color: cat.color }}>{cat.name}</span>
@@ -277,7 +296,8 @@ export default function AddBirthdayForm({
           ))}
         </div>
       </div>
-
+      </div>
+      {/* Footer Buttons */}
       <div className="flex justify-end space-x-2">
         <button
           type="button"
@@ -287,26 +307,33 @@ export default function AddBirthdayForm({
           Cancel
         </button>
         <button
-          type="submit"
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
+          type="button"
+          onClick={() => handleSubmit("exit")}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
         >
-          Save ➜ Upload Avatar
+          {isEditMode ? "Update and Exit" : "Save and Exit"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleSubmit("upload")}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          {isEditMode ? "Update ➜ Upload Avatar" : "Save ➜ Upload Avatar"}
         </button>
       </div>
-      {showUploadPrompt && newlyCreatedId && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
-            <AvatarUploadDialog
-              personId={newlyCreatedId}
-              onUploadComplete={async () => {
-                await refreshPeople();
-                setShowUploadPrompt(false);
-                setNewlyCreatedId(null);
-                onClose();
-              }}
-            />
-          </div>
-        </div>
+
+      {/* Avatar Upload Dialog */}
+      {showUploadPrompt && personIdForUpload && (
+        <AvatarUploadDialog
+          personId={personIdForUpload}
+          onUploadComplete={async () => {
+            setShowUploadPrompt(false);
+            await refreshPeople();
+            setPersonIdForUpload(null);
+            onClose();
+          }}
+        />
       )}
     </form>
   );
