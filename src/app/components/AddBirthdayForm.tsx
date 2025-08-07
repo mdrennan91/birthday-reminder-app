@@ -92,6 +92,10 @@ export default function AddBirthdayForm({
     const newErrors: typeof errors = {};
     const currentYear = new Date().getFullYear();
 
+    if (!formData.name.trim()) {
+      newErrors.name = "Name is required";
+    }
+
     if (+formData.month < 1 || +formData.month > 12)
     newErrors.month = "Invalid month";
 
@@ -164,6 +168,7 @@ export default function AddBirthdayForm({
 
       {/* Input Fields (unchanged) */}
       <div className="grid grid-cols-2 gap-4">
+        <div>
         <input
           type="text"
           name="name"
@@ -174,9 +179,10 @@ export default function AddBirthdayForm({
           required
         />
         {errors.name && (
-          <p className="col-span-2 text-sm text-red-500">{errors.name}</p>
+          <p className="text-sm text-red-500 mt-1">{errors.name}</p>
         )}
-
+        </div>
+        <div>
         <select
           name="month"
           value={formData.month}
@@ -194,8 +200,9 @@ export default function AddBirthdayForm({
         {errors.month && (
           <p className="col-span-2 text-sm text-red-500">{errors.month}</p>
         )}
+        </div>
 
-
+        <div>
         <input
           type="number"
           name="day"
@@ -208,7 +215,8 @@ export default function AddBirthdayForm({
         {errors.day && (
           <p className="col-span-2 text-sm text-red-500">{errors.day}</p>
         )}
-
+        </div>
+        <div>
         <input
           type="number"
           name="year"
@@ -221,7 +229,8 @@ export default function AddBirthdayForm({
         {errors.year && (
           <p className="col-span-2 text-sm text-red-500">{errors.year}</p>
         )}
-
+        </div>
+        <div>
         <input
           type="text"
           name="phone"
@@ -233,7 +242,8 @@ export default function AddBirthdayForm({
         {errors.phone && (
           <p className="col-span-2 text-sm text-red-500">{errors.phone}</p>
         )}
-
+        </div>
+        <div>
         <input
           type="email"
           name="email"
@@ -245,7 +255,8 @@ export default function AddBirthdayForm({
         {errors.email && (
           <p className="col-span-2 text-sm text-red-500">{errors.email}</p>
         )}
-
+        </div>
+        <div>
         <input
           type="text"
           name="address"
@@ -255,7 +266,7 @@ export default function AddBirthdayForm({
           className="w-full col-span-2 p-2 border rounded"
         />
       </div>
-
+      <div>
       <textarea
         name="notes"
         placeholder="Notes"
@@ -263,7 +274,7 @@ export default function AddBirthdayForm({
         onChange={handleChange}
         className="w-full p-2 border rounded"
       />
-
+      </div>
       <div>
         <label className="block font-medium mb-1">Categories</label>
         <div className="flex flex-wrap gap-2">
@@ -285,7 +296,7 @@ export default function AddBirthdayForm({
           ))}
         </div>
       </div>
-
+      </div>
       {/* Footer Buttons */}
       <div className="flex justify-end space-x-2">
         <button
