@@ -92,6 +92,9 @@ export default function AddBirthdayForm({
     const newErrors: typeof errors = {};
     const currentYear = new Date().getFullYear();
 
+    if (+formData.month < 1 || +formData.month > 12)
+    newErrors.month = "Invalid month";
+
     if (+formData.day < 1 || +formData.day > 31) newErrors.day = "Invalid day";
     if (+formData.year < currentYear - 150 || +formData.year > currentYear)
       newErrors.year = "Invalid year";
@@ -188,6 +191,10 @@ export default function AddBirthdayForm({
             </option>
           ))}
         </select>
+        {errors.month && (
+          <p className="col-span-2 text-sm text-red-500">{errors.month}</p>
+        )}
+
 
         <input
           type="number"
