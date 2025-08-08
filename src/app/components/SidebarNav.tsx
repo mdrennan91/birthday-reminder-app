@@ -193,7 +193,7 @@ export default function Sidebar() {
               window.dispatchEvent(event);
             }}
           >
-            Clear Selected Filters
+            Clear Filter
           </button>
         </div>
       </div>
