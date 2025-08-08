@@ -104,23 +104,27 @@ export default function PersonDetails({
 
         {person.birthday && (() => {
           const birthday = dayjs(person.birthday);
-          const today = dayjs();
+          const today = dayjs().startOf("day");
 
-          let birthdayThisYear = birthday.year(today.year());
-          if (birthdayThisYear.isBefore(today, "day")) {
+          let birthdayThisYear = birthday.set("year", today.year()).startOf("day");
+          if (birthdayThisYear.isBefore(today)) {
             birthdayThisYear = birthdayThisYear.add(1, "year");
           }
 
           const currentAge = today.diff(birthday, "year");
-          const age = currentAge + 1;
           const daysUntil = birthdayThisYear.diff(today, "day");
+          const displayAge = daysUntil > 0 ? currentAge + 1 : currentAge;
           const formattedBirthday = birthday.format("MM/DD/YYYY");
 
           return (
             <>
               <p className="font-semibold text-black">
 
-                {person.name} is turning {age} in {daysUntil === 0 ? "today!" : `${daysUntil} day${daysUntil !== 1 ? "s" : ""}`}.
+                {daysUntil === 0
+                  ? `${person.name} is turning ${displayAge} today!`
+                  : daysUntil === 1
+                    ? `${person.name} is turning ${displayAge} tomorrow.`
+                    : `${person.name} is turning ${displayAge} in ${daysUntil} days.`}
 
               </p>
               <p>
