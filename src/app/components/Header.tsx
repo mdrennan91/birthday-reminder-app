@@ -1,18 +1,25 @@
 "use client";
 
+import Image from "next/image";
+
+
 import { useSession, signOut } from "next-auth/react";
 
 export default function Header() {
   const { data: session } = useSession();
 
   return (
-    <header className="w-full flex justify-between items-center bg-lavender border-b border-teal px-6 py-4 shadow-sm">
+    <header className="w-full flex justify-between items-center bg-lavender border-b px-6 py-4 shadow-sm">
       {/* Logo + Title */}
       <div className="flex items-center gap-2">
-        <div className="w-10 h-10 bg-teal rounded-full flex items-center justify-center text-white font-bold">
-          L
-        </div>
-        <h1 className="text-xl font-semibold text-teal">Birthday Reminder</h1>
+        <Image
+          src="/birthday-logo.png"
+          alt="CakeMe logo"
+          width={40}
+          height={40}
+          className="object-contain"
+        />
+        <h1 className="text-xl font-bold text-teal-700">CakeMe</h1>
       </div>
 
       {/* User Greeting and Auth Buttons */}
@@ -25,16 +32,12 @@ export default function Header() {
             </span>
             <button
               onClick={() => signOut()}
-              className="px-4 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded"
+              className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded"
             >
               Logout
             </button>
           </>
-        ) : (
-          <>
-            <span className="text-gray-700">Please sign in</span>
-          </>
-        )}
+        ) : null}
       </div>
     </header>
   );

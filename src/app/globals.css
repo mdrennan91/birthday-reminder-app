@@ -5,22 +5,15 @@
 
 /* Custom Theme Variables */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --lavender-web: #e5e1eeff;
+  --light-cyan: #dffdffff;
+  --powder-blue: #90bedeff;
   --font-sans: 'Cabin', sans-serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: var(--powder-blue);
 }
 
 body {
   background-color: var(--background);
-  color: var(--foreground);
+  color: black;
   font-family: var(--font-sans);
 }

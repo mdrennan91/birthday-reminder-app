@@ -17,15 +17,15 @@ interface CategoryType {
 }
 
 export default function Sidebar() {
+  const { status } = useSession();
+  const [, setLoading] = useState(true);
   const [categories, setCategories] = useState<CategoryType[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit">("add");
   const [selectedCategory, setSelectedCategory] = useState<CategoryType | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const { status } = useSession();
-
+  const [filtersActive, setFiltersActive] = useState(false);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -34,6 +34,14 @@ export default function Sidebar() {
       setLoading(false); // ensure we stop showing "Loading..." if not logged in
     }
   }, [status]);
+
+  useEffect(() => {
+  if (activeCategory === null) {
+    setFiltersActive(false);
+  } else {
+    setFiltersActive(true);
+  }
+}, [activeCategory]);
 
 
   // Fetch user categories from API
@@ -68,8 +76,8 @@ export default function Sidebar() {
       });
 
       if (res.ok) {
-        const created = await res.json();
-        setCategories((prev) => [...prev, created]);
+        await fetchCategories();
+        window.dispatchEvent(new Event("categoryUpdated"));
       }
     } else if (modalMode === "edit" && selectedCategory) {
       const res = await fetch(`/api/categories/${selectedCategory._id}`, {
@@ -79,11 +87,8 @@ export default function Sidebar() {
       });
 
       if (res.ok) {
-        setCategories((prev) =>
-          prev.map((cat) =>
-            cat._id === selectedCategory._id ? { ...cat, name, color } : cat
-          )
-        );
+        await fetchCategories();
+        window.dispatchEvent(new Event("categoryUpdated"));
       }
     }
   };
@@ -95,8 +100,10 @@ export default function Sidebar() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, color }),
     });
+
     if (res.ok) {
       fetchCategories();
+      window.dispatchEvent(new Event("categoryUpdated"));
     }
   };
 
@@ -107,28 +114,32 @@ export default function Sidebar() {
       setCategories((prev) => prev.filter((cat) => cat._id !== id));
     }
   };
-
-  if (loading) {
-    return <aside className="w-64 p-4 border-r border-teal bg-lavender">Loading...</aside>;
+  
+  if (status === "unauthenticated") {
+    return null;
   }
-    if (status === "unauthenticated") {
-    return null; // Don’t show anything if not logged in
+  if (status === "loading") {
+  return <div className="p-4 text-center">Loading...</div>;
   }
 
 return (
     <aside className="w-64 p-4 border-r border-teal bg-lavender flex flex-col ">
       {/* Header controls */}
       <div className="flex justify-between items-center mb-4">
-        <div></div>
+        <div className="font-extrabold text-xl">Filter Categories</div>
         <div className="flex gap-2">
           <button
             onClick={openAddModal}
+            aria-label="Add Category"
+            title="Add Category"
             className="p-1 bg-teal text-white rounded hover:bg-teal/80"
           >
             <Plus size={18} />
           </button>
           <button
             onClick={openEditDialog}
+            aria-label="Edit Categories"
+            title="Edit Categories"
             className="p-1 bg-gray-300 text-black rounded hover:bg-gray-400"
           >
             <Pencil size={18} />
@@ -146,13 +157,14 @@ return (
                 className={`w-full text-left py-1 px-2 rounded font-medium ${
                   activeCategory === cat.name.toLowerCase()
                     ? "bg-teal/20 border-l-4 border-teal"
-                    : "bg-lavender hover:bg-teal/10"
+                    : "bg-lavender hover:bg-teal/50"
                 }`}
                 onClick={() => {
                   const event = new CustomEvent(CATEGORY_FILTER_EVENT, {
                     detail: cat.name.toLowerCase(),
                   });
                   window.dispatchEvent(event);
+                  setFiltersActive(true);
                 }}
               >
                 {cat.name}
@@ -166,12 +178,13 @@ return (
       <div className="sticky bottom-0 bg-lavender pt-3 pb-4 mt-2 border-t border-gray-300">
         <button
           className={`w-full text-left py-1 px-2 rounded font-medium ${
-            activeCategory === null
-              ? "bg-teal/20 border-l-4 border-teal"
-              : "bg-lavender hover:bg-teal/10"
+            filtersActive
+            ? "bg-lavender hover:bg-teal/50"
+            : "bg-teal/20 border-l-4 border-teal"
           }`}
           onClick={() => {
             setActiveCategory(null);
+            setFiltersActive(false);
             const event = new CustomEvent(CATEGORY_FILTER_EVENT, { detail: null });
             window.dispatchEvent(event);
           }}
@@ -180,7 +193,7 @@ return (
         </button>
       </div>
 
-
+      
 
       {/* Modals */}
       <CategoryModal

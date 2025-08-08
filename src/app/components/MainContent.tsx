@@ -1,323 +1,371 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import dayjs from "dayjs";
-import relativeTime from "dayjs/plugin/relativeTime";
 import isToday from "dayjs/plugin/isToday";
-import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import { useSession } from "next-auth/react";
-import AddBirthdayForm from "./AddBirthdayForm";
 
+import { Person, PersonWithBirthday } from "@/types";
+import { addBirthdayThisYear } from "@/lib/helper/addBirthdayThisYear";
+import { sortByUpcoming } from "@/lib/sorting/sortByUpcoming";
+import { sortPinnedFirst } from "@/lib/sorting/sortPinnedFirst";
+import { groupByMonth } from "@/lib/sorting/groupByMonth";
+import { fetchBirthdays } from "@/lib/api/fetchBirthdays";
+import { deleteBirthday } from "@/lib/api/deleteBirthday";
+import { refreshPeople } from "@/lib/api/refreshPeople";
+import AddBirthdayModal from "./AddEditBirthdayModal";
+import { updatePinnedStatus } from "@/lib/api/updatePinnedStatus";
+import { useSignedAvatars } from "@/lib/helper/useSignedAvatars";
+import PersonDetails from "./PersonDetails";
+import DeleteConfirmationDialog from "./DeleteConfirmationDialog";
+import ErrorDialog from "./ErrorDialog";
 
-// Extend dayjs with plugins
-dayjs.extend(relativeTime);
 dayjs.extend(isToday);
-dayjs.extend(isSameOrAfter);
-
-// Updated: category is now an array
-interface Person {
-  _id: string;
-  name: string;
-  birthday: string;
-  phone: string;
-  email: string;
-  address: string;
-  notes: string;
-  userId: string;
-  avatarUrl: string;
-  categories: string[];
-}
 
 const CATEGORY_FILTER_EVENT = "filter-category";
 
+const LazyImage = dynamic(() => import("next/image"), {
+  loading: () => <div>Loading...</div>,
+});
+
 export default function MainContent() {
-  const [people, setPeople] = useState<Person[]>([]);
-  const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
-  const [displayCount, setDisplayCount] = useState(4);
-  const [pinnedIds, setPinnedIds] = useState<string[]>([]);
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false); 
   const { status } = useSession();
+  const [today, setToday] = useState<dayjs.Dayjs | null>(null);
+  const [people, setPeople] = useState<Person[]>([]);
+  const [selectedPerson, setSelectedPerson] = useState<PersonWithBirthday | null>(null);
+  const [displayCount, setDisplayCount] = useState<number | "all">(4);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [showAddModal, setShowAddForm] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [allCategories, setAllCategories] = useState<{ _id: string; name: string; color: string }[]>([]);
+  const [allPeople, setAllPeople] = useState<Person[]>([]);
+  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
-  const fetchBirthdays = useCallback(async () => {
-    if (status !== "authenticated") return;
-    try {
-      const response = await fetch("/api/birthdays");
-      if (!response.ok) throw new Error("Failed to load birthdays");
+  const avatarUrls = useSignedAvatars(people);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [errorOpen, setErrorOpen] = useState(false);
 
-      const rawData = await response.json();
-      const normalized = rawData.map((person: Partial<Person>) => ({
-        ...person,
-        categories: Array.isArray(person.categories)
-          ? person.categories
-          : typeof person.categories === "string"
-          ? [person.categories]
-          : [],
-      }));
+  useEffect(() => {
+    setToday(dayjs());
+  }, []);
 
-      setPeople(normalized);
-    } catch (error) {
-      console.error("Error loading birthdays:", error);
+  useEffect(() => {
+    if (status === "authenticated") {
+      fetchBirthdays()
+        .then((birthdays) => {
+          setAllPeople(birthdays);
+          setPeople(birthdays);
+        })
+        .catch(console.error);
     }
   }, [status]);
 
   useEffect(() => {
-    if (status === "authenticated") {
-      fetchBirthdays();
+    const handleCategoryFilter = (e: CustomEvent) => setActiveCategory(e.detail);
+    window.addEventListener(CATEGORY_FILTER_EVENT, handleCategoryFilter as EventListener);
+    return () => window.removeEventListener(CATEGORY_FILTER_EVENT, handleCategoryFilter as EventListener);
+  }, []);
+
+  useEffect(() => {
+    async function fetchCategories() {
+      const res = await fetch("/api/categories");
+      if (res.ok) {
+        const data = await res.json();
+        setAllCategories(data);
+      }
     }
 
-    const handleCategoryFilter = (e: CustomEvent) => {
-      setActiveCategory(e.detail);
+    if (status === "authenticated") {
+      fetchCategories();
+    }
+  }, [status]);
+
+  useEffect(() => {
+    const handleCategoryUpdate = () => {
+      fetch("/api/categories")
+        .then((res) => res.json())
+        .then(setAllCategories)
+        .catch(console.error);
     };
 
-    window.addEventListener(CATEGORY_FILTER_EVENT, handleCategoryFilter as EventListener);
-    return () => {
-      window.removeEventListener(CATEGORY_FILTER_EVENT, handleCategoryFilter as EventListener);
-    };
-  }, [status, fetchBirthdays]);
+    window.addEventListener("categoryUpdated", handleCategoryUpdate);
+    return () => window.removeEventListener("categoryUpdated", handleCategoryUpdate);
+  }, []);
 
+  const todaySafe = useMemo(() => today ?? dayjs(), [today]);
 
-  
-  const today = dayjs();
-
-  const pinnedPeople = useMemo(() => {
-    return people
-      .filter(p => pinnedIds.includes(p._id))
-      .map(person => {
-        let birthdayThisYear = dayjs(person.birthday).set("year", today.year());
-        if (birthdayThisYear.isBefore(today, "day")) {
-          birthdayThisYear = birthdayThisYear.add(1, "year");
-        }
-        return { ...person, birthdayThisYear };
-      })
-      .sort((a, b) => a.birthdayThisYear.diff(b.birthdayThisYear));
-  }, [people, pinnedIds, today]);
+  const peopleWithBirthday = useMemo(() => addBirthdayThisYear(people, todaySafe), [people, todaySafe]);
 
   const upcoming = useMemo(() => {
-    return people
-      .filter(p => !pinnedIds.includes(p._id))
-      .filter(p => {
-        return !activeCategory || (
-          Array.isArray(p.categories) &&
-          p.categories.some(cat =>
-            typeof cat === "string" &&
-            cat.toLowerCase() === activeCategory.toLowerCase()
-          )
-        );
-      })
-      .map(person => {
-        let birthdayThisYear = dayjs(person.birthday).set("year", today.year());
-        if (birthdayThisYear.isBefore(today, "day")) {
-          birthdayThisYear = birthdayThisYear.add(1, "year");
-        }
-        return { ...person, birthdayThisYear };
-      })
-      .sort((a, b) => a.birthdayThisYear.diff(b.birthdayThisYear))
-      .slice(0, displayCount);
-  }, [people, pinnedIds, activeCategory, displayCount, today]);
+    return sortByUpcoming({
+      people: peopleWithBirthday,
+      today: today ?? dayjs(),
+      activeCategory,
+      displayCount: displayCount === "all" ? undefined : displayCount,
+    });
+  }, [peopleWithBirthday, today, activeCategory, displayCount]);
 
-  const combinedList = [...pinnedPeople, ...upcoming];
+  const combinedList = useMemo(() => sortPinnedFirst(upcoming), [upcoming]);
 
-  const handleDelete = async () => {
+  const groupedByMonth = useMemo(() => groupByMonth(combinedList), [combinedList]);
+
+  const requestDelete = async (): Promise<void> => {
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
     if (!selectedPerson) return;
 
-    const confirmed = confirm(`Are you sure you want to delete ${selectedPerson.name}?`);
-    if (!confirmed) return;
-
+    setIsDeleting(true);
     try {
-      const res = await fetch(`/api/birthdays/${selectedPerson._id}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to delete birthday");
-      }
-
-      await fetchBirthdays();         // Refresh the list
-      setSelectedPerson(null);       // Deselect the person
+      await deleteBirthday(selectedPerson._id);
+      await refreshPeople(setPeople);
+      setSelectedPerson(null);
     } catch (err) {
       console.error("Error deleting birthday:", err);
-      alert("Failed to delete birthday.");
+      setErrorMessage("Failed to delete birthday.");
+      setErrorOpen(true);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
     }
   };
 
+  if (!today) return null; 
+   
+  if (status === "unauthenticated") return null;
+  if (status === "loading") return <div className="p-4 text-center">Loading...</div>;
 
-  const grouped = combinedList.reduce((acc, person) => {
-    const month = person.birthdayThisYear.format("MMMM");
-    if (!acc[month]) acc[month] = [];
-    acc[month].push(person);
-    return acc;
-  }, {} as Record<string, (Person & { birthdayThisYear: dayjs.Dayjs })[]>);
+  // console.log("Display count:", displayCount);
+  // console.log("Upcoming birthdays (pre-pinned sort):", upcoming);
+  // console.log("Combined list (after pinned sort):", combinedList);
 
-  const monthOrder = {
-    January: 0, February: 1, March: 2, April: 3,
-    May: 4, June: 5, July: 6, August: 7,
-    September: 8, October: 9, November: 10, December: 11,
-  };
-
-  const orderedMonths = Object.keys(grouped).sort(
-  (a, b) => monthOrder[a as keyof typeof monthOrder] - monthOrder[b as keyof typeof monthOrder]
-  );
-
-  if (status === "unauthenticated") {
-    return null; // Don’t show anything if not logged in
-  }
-  
+  // console.log("Display count:", displayCount);
+  // console.log("Upcoming birthdays (pre-pinned sort):", upcoming);
+  // console.log("Combined list (after pinned sort):", combinedList);
 
   return (
     <main className="flex flex-1 overflow-hidden">
+      {/* Left Column */}
       <section className="w-1/2 p-4 border-r border-teal overflow-y-auto bg-white">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold">Upcoming Birthdays</h2>
-          <select
+          <input
+            type="text"
+            placeholder="Search..."
             className="border p-1 text-sm rounded"
-            value={displayCount}
-            onChange={(e) => setDisplayCount(Number(e.target.value))}
+            onChange={(e) => {
+              const query = e.target.value.toLowerCase();
+              if (timeoutId) clearTimeout(timeoutId);
+              const newTimeout = setTimeout(() => {
+                if (query === "") {
+                  setPeople(allPeople);
+                  return;
+                }
+                const filtered = allPeople.filter((p) => p.name.toLowerCase().includes(query));
+                if (filtered.length > 0) {
+                  setPeople(filtered);
+                } else {
+                  alert("No results found.");
+                  e.target.value = "";
+                  setPeople(allPeople);
+                }
+              }, 1000);
+              setTimeoutId(newTimeout);
+            }}
+          />
+          <div className="flex items-center gap-2">
+            <label htmlFor="display-count" className="sr-only">Number of birthdays to show</label>
+            <select
+              id="display-count"
+              className="border p-1 text-sm rounded"
+              value={displayCount}
+              onChange={(e) => {
+                const val = e.target.value;
+                setDisplayCount(val === "all" ? "all" : Number(val));
+              }}
+            >
+              {[4, 6, 8, 10].map((n) => <option key={n} value={n}>Show {n}</option>)}
+              <option value="all">Show all</option>
+            </select>
+          </div>
+          {/* Open add birthday modal */}
+
+          <button
+            onClick={() => {
+              setIsEditing(false);
+              setSelectedPerson(null);
+              setShowAddForm(true);
+            }}
+            className="px-3 py-1 text-sm rounded border"
+            style={{
+              backgroundColor: "#2F6F9F",
+              color: "#ffffff",
+              zIndex: 10,
+              position: "relative",
+            }}
           >
-            {[4, 6, 8, 10].map(n => (
-              <option key={n} value={n}>{n} shown</option>
-            ))}
-          </select>
+            + Add Birthday
+          </button>
         </div>
 
-        {/* Add Birthday Button */}
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="mb-4 px-4 py-2 bg-teal text-white rounded hover:bg-teal-dark"
-        >
-          + Add Birthday
-        </button>
-
-
-          {/*  Show empty state if no results */}
-          {orderedMonths.length === 0 && (
-            <div className="text-center text-gray-600 mt-10">
-              No birthdays found in this category.
-            </div>
-          )}
-
-        {orderedMonths.map(month => (
-          <div key={month} className="mb-6">
-            <h3 className="text-md font-bold text-teal mb-2">{month}</h3>
-            <ul className="space-y-4">
-              {grouped[month].map(person => {
-                const age = person.birthdayThisYear.diff(dayjs(person.birthday), "year");
-                const daysUntil = person.birthdayThisYear.diff(today, "day");
-                const daysLabel = person.birthdayThisYear.isToday() ? "Today" : `${daysUntil} days`;
-
-                return (
-                  <li
-                    key={person._id}
-                    className="border border-teal rounded p-4 flex items-center justify-between cursor-pointer hover:bg-teal/5"
-                    onClick={() => setSelectedPerson(person)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={pinnedIds.includes(person._id)}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          setPinnedIds((prev) =>
-                            prev.includes(person._id)
-                              ? prev.filter(id => id !== person._id)
-                              : [...prev, person._id]
-                          );
-                        }}
-                      />
-                      {person.avatarUrl ? (
-                        <Image
-                          src={person.avatarUrl}
-                          alt={person.name}
-                          width={80}
-                          height={80}
-                          className="rounded-full"
-                        />
-                      ) : (
-                        <div className="w-[80px] h-[80px] rounded-full bg-gray-700 text-white flex items-center justify-center">
-                          N/A
-                        </div>
-                      )}
-                      <div className="text-left">
-                        <div className="font-semibold">{person.name}</div>
-                        <div className="text-sm text-gray-600">Age: {age}</div>
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-teal font-semibold">{person.birthdayThisYear.format("MMM D")}</div>
-                    </div>
-                    <div className="text-right text-sm text-gray-700">
-                      {daysLabel}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
-      </section>
-
-      <section className="w-1/2 p-4 overflow-y-auto bg-lavender">
-        {selectedPerson ? (
-          <div>
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-xl font-bold">{selectedPerson.name}</h2>
-              <div className="space-x-2">
-                <button
-                  onClick={() => {
-                    setShowAddForm(true);
-                  }}
-                  className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-            {selectedPerson.avatarUrl ? (
-              <Image
-                src={selectedPerson.avatarUrl}
-                alt={selectedPerson.name}
-                width={96}
-                height={96}
-                className="w-24 h-24 rounded-full mb-4 border border-teal"
-              />
-            ) : (
-              <div className="w-24 h-24 rounded-full mb-4 border border-teal bg-gray-700 text-white flex items-center justify-center">
-                N/A
-              </div>
-            )}
-            <div className="text-gray-700 space-y-2">
-              <p><strong>Birthday:</strong> {dayjs(selectedPerson.birthday).format("MM-DD-YYYY")}</p>
-              <p><strong>Phone:</strong> {selectedPerson.phone}</p>
-              <p><strong>Email:</strong> {selectedPerson.email}</p>
-              <p><strong>Address:</strong> {selectedPerson.address}</p>
-              <p><strong>Notes:</strong> {selectedPerson.notes}</p>
-            </div>
+        {combinedList.length === 0 ? (
+          <div className="text-center text-gray-600 mt-10">
+            No birthdays found in this category.
           </div>
         ) : (
-          <p className="text-gray-600">Select a person to view their details.</p>
+          Object.entries(groupedByMonth).map(([month, peopleInMonth]) => (
+            <div key={month} className="mb-6">
+              <h3 className="text-md font-bold text-teal-800 mb-2">{month}</h3>
+              <ul className="space-y-4">
+                {peopleInMonth.map((person) => {
+                  const age = dayjs().diff(dayjs(person.birthday), "year");
+                  const daysUntil = person.birthdayThisYear.diff(today, "day");
+                  const adjustedDaysUntil = person.birthdayThisYear.isToday() ? 0 : daysUntil + 1;
+                  const daysLabel = adjustedDaysUntil === 0
+                    ? "Today"
+                    : `${adjustedDaysUntil} day${adjustedDaysUntil !== 1 ? "s" : ""}`;
+
+                  return (
+                    <li
+                      key={person._id}
+                      className="border border-teal rounded p-4 flex items-center justify-between cursor-pointer hover:bg-teal/25"
+                      onClick={() => setSelectedPerson(person)}
+                    >
+                      <div className="flex items-start gap-3 w-full max-w-[300px]">
+                        <input
+                          type="checkbox"
+                          checked={person.pinned ?? false}
+                          onChange={async (e) => {
+                            e.stopPropagation();
+                            const newPinned = e.target.checked;
+                            try {
+                              await updatePinnedStatus(person._id, newPinned);
+                              await refreshPeople(setPeople);
+                            } catch (err) {
+                              console.error(
+                                "Failed to update pinned state:",
+                                err
+                              );
+                            }
+                          }}
+                          aria-label={`Pin ${person.name}`}
+                          title={`Pin ${person.name}`}
+                        />
+                        <Image
+                          src={avatarUrls[person._id] || "/default-avatar.png"}
+                          alt={person.name}
+                          width={40}
+                          height={40}
+                          className="rounded-full aspect-square object-cover border border-teal"
+                        />
+                        <div className="text-left">
+                          <div className="font-semibold">{person.name}</div>
+                          <div className="text-sm text-gray-600">
+                            Age: {age}
+                          </div>
+                          {(person.categories?.length ?? 0) > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {person.categories?.map((catRef) => {
+                                const matching = allCategories.find(
+                                  (c) => c._id === catRef._id
+                                );
+                                return (
+                                  <span
+                                    key={catRef._id}
+                                    className="px-1.5 py-0.5 rounded text-white text-xs font-medium"
+                                    style={{
+                                      backgroundColor:
+                                        matching?.color || "#888",
+                                    }}
+                                  >
+                                    {matching?.name || "Unknown"}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-center w-[70px] shrink-0">
+                        <div className="text-teal-800 font-semibold">
+                          {person.birthdayThisYear.format("MMM D")}
+                        </div>
+                      </div>
+                      <div className="text-right text-sm text-gray-700 w-[80px] shrink-0">
+                        {daysLabel}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))
         )}
       </section>
-      {showAddForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg max-w-lg w-full">
-            <AddBirthdayForm
-              onClose={() => {
-                setShowAddForm(false);
-                setSelectedPerson(null); // optional: clear selected person after editing
-              }}
-              refreshPeople={fetchBirthdays}
-              personToEdit={selectedPerson} // pass the selected person
+      {/* Right Column: Person Details */}
+
+      <section className="w-1/2 max-h-[calc(100vh-200px)] overflow-y-auto p-4 bg-lavender">
+        {selectedPerson ? (
+          <PersonDetails
+            person={selectedPerson}
+            allCategories={allCategories}
+            avatarUrl={avatarUrls[selectedPerson._id]}
+            onEdit={() => {
+              setIsEditing(true);
+              setShowAddForm(true);
+            }}
+            onDelete={requestDelete}
+            onClose={() => setSelectedPerson(null)}
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-start min-h-full pt-10">
+            <LazyImage
+              src="/empty-state.webp"
+              alt="No birthday selected"
+              width={500}
+              height={500}
+              priority
+              className="mb-4 opacity-80"
             />
           </div>
-        </div>
+        )}
+      </section>
+
+      {/* Modal for adding or editing birthdays */}
+      <AddBirthdayModal
+        show={showAddModal}
+        onClose={() => {
+          setShowAddForm(false);
+          setIsEditing(false);
+        }}
+        onRefresh={async () => {
+          await refreshPeople(setPeople);
+        }}
+        personToEdit={isEditing ? selectedPerson : null}
+        onUpdated={(updatedPerson) => setSelectedPerson(updatedPerson)}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteDialog && selectedPerson && (
+        <DeleteConfirmationDialog
+          open={showDeleteDialog}
+          personName={selectedPerson.name}
+          onCancel={() => setShowDeleteDialog(false)}
+          onConfirm={confirmDelete}
+          isLoading={isDeleting}
+        />
       )}
+      {/* Error Dialog */}
+      <ErrorDialog
+        open={errorOpen}
+        message={errorMessage}
+        onClose={() => setErrorOpen(false)}
+      />
     </main>
   );
 }

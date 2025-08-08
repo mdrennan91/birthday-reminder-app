@@ -15,8 +15,11 @@ const cabin = Cabin({
 });
 
 export const metadata: Metadata = {
-  title: "Birthday Reminder App",
+  title: "CakeMe App",
   description: "Track and celebrate the people you care about",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export default function RootLayout({
@@ -25,8 +28,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${cabin.variable} font-sans bg-[var(--background)] text-[var(--foreground)]`}>
+    <html lang="en" className={`${cabin.variable}`}>
+      <body className={`font-sans bg-[var(--background)] text-[var(--foreground)]`}>
         <Providers>
           <div className="flex flex-col min-h-screen">
             <Header />

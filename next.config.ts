@@ -1,13 +1,12 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+module.exports = {
   images: {
+    loader: 'default',
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'i.pravatar.cc',
+        hostname: 'zlgftyaenzcktyfknjns.supabase.co',
+        pathname: '/storage/v1/object/**',
       },
     ],
   },
-};
-
-module.exports = nextConfig;
+}
