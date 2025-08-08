@@ -22,7 +22,9 @@ export default function Sidebar() {
   const [categories, setCategories] = useState<CategoryType[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit">("add");
-  const [selectedCategory, setSelectedCategory] = useState<CategoryType | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<CategoryType | null>(
+    null
+  );
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [filtersActive, setFiltersActive] = useState(false);
@@ -36,13 +38,12 @@ export default function Sidebar() {
   }, [status]);
 
   useEffect(() => {
-  if (activeCategory === null) {
-    setFiltersActive(false);
-  } else {
-    setFiltersActive(true);
-  }
-}, [activeCategory]);
-
+    if (activeCategory === null) {
+      setFiltersActive(false);
+    } else {
+      setFiltersActive(true);
+    }
+  }, [activeCategory]);
 
   // Fetch user categories from API
   const fetchCategories = async () => {
@@ -94,7 +95,11 @@ export default function Sidebar() {
   };
 
   // Update category directly from dialog
-  const handleUpdateCategory = async (id: string, name: string, color: string) => {
+  const handleUpdateCategory = async (
+    id: string,
+    name: string,
+    color: string
+  ) => {
     const res = await fetch(`/api/categories/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -114,15 +119,15 @@ export default function Sidebar() {
       setCategories((prev) => prev.filter((cat) => cat._id !== id));
     }
   };
-  
+
   if (status === "unauthenticated") {
     return null;
   }
   if (status === "loading") {
-  return <div className="p-4 text-center">Loading...</div>;
+    return <div className="p-4 text-center">Loading...</div>;
   }
 
-return (
+  return (
     <aside className="w-64 p-4 border-r border-teal bg-lavender flex flex-col ">
       {/* Header controls */}
       <div className="flex justify-between items-center mb-4">
@@ -172,28 +177,28 @@ return (
             </li>
           ))}
         </ul>
+        <div className="sticky bottom-0 bg-lavender pt-3 pb-4 mt-2 border-t border-gray-300">
+          <button
+            className={`w-full text-left py-1 px-2 rounded font-medium ${
+              filtersActive
+                ? "bg-lavender hover:bg-teal/50"
+                : "bg-teal/20 border-l-4 border-teal"
+            }`}
+            onClick={() => {
+              setActiveCategory(null);
+              setFiltersActive(false);
+              const event = new CustomEvent(CATEGORY_FILTER_EVENT, {
+                detail: null,
+              });
+              window.dispatchEvent(event);
+            }}
+          >
+            Clear Selected Filters
+          </button>
+        </div>
       </div>
 
       {/* Sticky "Clear Filters" button at bottom */}
-      <div className="sticky bottom-0 bg-lavender pt-3 pb-4 mt-2 border-t border-gray-300">
-        <button
-          className={`w-full text-left py-1 px-2 rounded font-medium ${
-            filtersActive
-            ? "bg-lavender hover:bg-teal/50"
-            : "bg-teal/20 border-l-4 border-teal"
-          }`}
-          onClick={() => {
-            setActiveCategory(null);
-            setFiltersActive(false);
-            const event = new CustomEvent(CATEGORY_FILTER_EVENT, { detail: null });
-            window.dispatchEvent(event);
-          }}
-        >
-          Clear Filters
-        </button>
-      </div>
-
-      
 
       {/* Modals */}
       <CategoryModal
