@@ -330,7 +330,7 @@ export default function MainContent() {
               width={500}
               height={500}
               priority
-              className="mb-4 opacity-80"
+              className="mb-4 opacity-80 h-auto w-auto max-w-full"
             />
           </div>
         )}

@@ -27,7 +27,7 @@ export default function Sidebar() {
   );
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [filtersActive, setFiltersActive] = useState(false);
+  const filtersActive = activeCategory !== null;
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -38,14 +38,14 @@ export default function Sidebar() {
   }, [status]);
 
   useEffect(() => {
-    if (activeCategory === null) {
-      setFiltersActive(false);
-    } else {
-      setFiltersActive(true);
-    }
-  }, [activeCategory]);
+    const onFilter = (e: Event) => {
+      const detail = (e as CustomEvent).detail ?? null;
+      setActiveCategory(detail);
+    };
+    window.addEventListener(CATEGORY_FILTER_EVENT, onFilter as EventListener);
+    return () => window.removeEventListener(CATEGORY_FILTER_EVENT, onFilter as EventListener);
+  }, []);
 
-  // Fetch user categories from API
   const fetchCategories = async () => {
     const res = await fetch("/api/categories");
     if (res.ok) {
@@ -55,7 +55,7 @@ export default function Sidebar() {
     setLoading(false);
   };
 
-  // Open modal to add category
+   // Open modal to add category
   const openAddModal = () => {
     setSelectedCategory(null);
     setModalMode("add");
@@ -63,9 +63,7 @@ export default function Sidebar() {
   };
 
   // Open dialog to edit/delete categories
-  const openEditDialog = () => {
-    setEditDialogOpen(true);
-  };
+  const openEditDialog = () => setEditDialogOpen(true);
 
   // Save category to database (create or update)
   const handleSaveCategory = async (name: string, color: string) => {
@@ -96,8 +94,8 @@ export default function Sidebar() {
 
   // Update category directly from dialog
   const handleUpdateCategory = async (
-    id: string,
-    name: string,
+    id: string, 
+    name: string, 
     color: string
   ) => {
     const res = await fetch(`/api/categories/${id}`, {
@@ -117,19 +115,18 @@ export default function Sidebar() {
     const res = await fetch(`/api/categories/${id}`, { method: "DELETE" });
     if (res.ok) {
       setCategories((prev) => prev.filter((cat) => cat._id !== id));
+      if (activeCategory && !categories.some((c) => c._id === id)) {
+        setActiveCategory(null);
+      }
     }
   };
 
-  if (status === "unauthenticated") {
-    return null;
-  }
-  if (status === "loading") {
-    return <div className="p-4 text-center">Loading...</div>;
-  }
+  if (status === "unauthenticated") return null;
+  if (status === "loading") return <div className="p-4 text-center">Loading...</div>;
 
   return (
-    <aside className="w-64 p-4 border-r border-teal bg-lavender flex flex-col ">
-      {/* Header controls */}
+    <aside className="w-64 p-4 border-r border-teal bg-lavender flex flex-col">
+      {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <div className="font-extrabold text-xl">Filter Categories</div>
         <div className="flex gap-2">
@@ -152,44 +149,49 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Scrollable category list */}
+      {/* Categories */}
       <div className="flex-1 overflow-y-auto">
         <ul className="space-y-2">
-          {categories.map((cat) => (
-            <li key={cat._id}>
-              <button
-                style={{ color: cat.color }}
-                className={`w-full text-left py-1 px-2 rounded font-medium ${
-                  activeCategory === cat.name.toLowerCase()
-                    ? "bg-teal/20 border-l-4 border-teal"
-                    : "bg-lavender hover:bg-teal/50"
-                }`}
-                onClick={() => {
-                  const event = new CustomEvent(CATEGORY_FILTER_EVENT, {
-                    detail: cat.name.toLowerCase(),
-                  });
-                  window.dispatchEvent(event);
-                  setFiltersActive(true);
-                }}
-              >
-                {cat.name}
-              </button>
-            </li>
-          ))}
+          {categories.map((cat) => {
+            const value = cat.name.toLowerCase();
+            const isActive = activeCategory === value;
+            return (
+              <li key={cat._id}>
+                <button
+                  type="button"
+                  data-active={isActive}
+                  className={`w-full text-left py-1.5 px-2 rounded font-medium border transition
+                    bg-lavender hover:bg-white/60 border-transparent
+                    data-[active=true]:bg-white data-[active=true]:border-blue-400 data-[active=true]:ring-1 data-[active=true]:ring-blue-200`}
+                  onClick={() => {
+                    setActiveCategory(value); // ✅ set local active
+                    const event = new CustomEvent(CATEGORY_FILTER_EVENT, { detail: value });
+                    window.dispatchEvent(event);
+                  }}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <span
+                      className="inline-block h-2.5 w-2.5 rounded-full ring-2 ring-white"
+                      style={{ backgroundColor: cat.color }}
+                      aria-hidden
+                    />
+                    <span>{cat.name}</span>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
+        
+        {/* Clear Filter */}
         <div className="sticky bottom-0 bg-lavender pt-3 pb-4 mt-2 border-t border-gray-300">
           <button
-            className={`w-full text-left py-1 px-2 rounded font-medium ${
-              filtersActive
-                ? "bg-lavender hover:bg-teal/50"
-                : "bg-teal/20 border-l-4 border-teal"
-            }`}
+            type="button"
+            className={`w-full text-left py-1.5 px-2 rounded font-medium border transition
+              ${filtersActive ? "bg-white border-blue-400 ring-1 ring-blue-200" : "bg-lavender hover:bg-white/60 border-transparent"}`}
             onClick={() => {
-              setActiveCategory(null);
-              setFiltersActive(false);
-              const event = new CustomEvent(CATEGORY_FILTER_EVENT, {
-                detail: null,
-              });
+              setActiveCategory(null); // ✅ clear local active
+              const event = new CustomEvent(CATEGORY_FILTER_EVENT, { detail: null });
               window.dispatchEvent(event);
             }}
           >
@@ -197,8 +199,6 @@ export default function Sidebar() {
           </button>
         </div>
       </div>
-
-      {/* Sticky "Clear Filters" button at bottom */}
 
       {/* Modals */}
       <CategoryModal
