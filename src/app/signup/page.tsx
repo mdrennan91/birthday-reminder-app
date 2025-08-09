@@ -51,7 +51,7 @@ export default function SignUpPage() {
       });
 
       if (res.ok) {
-        router.push("/login");
+        router.push("/login?signup=success");
       } else if (res.status === 409) {
         setFormError("An account with this email already exists.");
       } else {
