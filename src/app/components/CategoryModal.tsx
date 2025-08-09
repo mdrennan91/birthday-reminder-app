@@ -29,48 +29,120 @@ export default function CategoryModal({
     setColor(initialColor);
   }, [initialName, initialColor, open]);
 
+  const canSave = name.trim().length > 0;
+
   const handleSubmit = () => {
-    if (!name.trim()) return;
-    onSave(name, color);
+    if (!canSave) return;
+    onSave(name.trim(), color);
     onOpenChange(false);
   };
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <Dialog.Root
+      open={open}
+      onOpenChange={(next) => {
+        // Close on backdrop/Esc
+        if (!next) onOpenChange(false);
+      }}
+    >
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded shadow-md w-80 z-50">
-          <div className="flex justify-between items-center mb-4">
-            <Dialog.Title className="text-lg font-semibold">
+        {/* Backdrop */}
+        <Dialog.Overlay
+          className="
+            fixed inset-0 z-50 bg-black/40
+            data-[state=open]:animate-in data-[state=open]:fade-in-0
+            data-[state=closed]:animate-out data-[state=closed]:fade-out-0
+          "
+        />
+
+        {/* Content: bottom sheet on mobile, centered on md+ */}
+        <Dialog.Content
+          aria-describedby="category-modal-desc"
+          className="
+            fixed z-50 bg-white shadow-xl focus:outline-none
+            inset-x-0 bottom-0 rounded-t-2xl p-4
+            md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2
+            md:rounded-lg md:p-6
+            w-full md:w-[90vw] md:max-w-sm
+            data-[state=open]:animate-in data-[state=open]:zoom-in-95 data-[state=open]:fade-in-0
+            data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=closed]:fade-out-0
+          "
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleSubmit();
+            }
+          }}
+        >
+          {/* Header */}
+          <div className="mb-3 flex items-center justify-between">
+            <Dialog.Title className="text-base font-semibold md:text-lg">
               {mode === "add" ? "Add Category" : "Edit Category"}
             </Dialog.Title>
-            <Dialog.Close className="text-gray-500 hover:text-black">
-              <X size={20} />
+            <Dialog.Close asChild>
+              <button
+                aria-label="Close"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border hover:bg-gray-50"
+              >
+                <X size={18} />
+              </button>
             </Dialog.Close>
           </div>
+          <Dialog.Description className="sr-only">
+              aria-describedby={undefined}
+            </Dialog.Description>
+          <Dialog.Description
+            id="category-modal-desc"
+            className="mb-3 text-sm text-gray-600"
+          >
+            Choose a name and color for your category.
+          </Dialog.Description>
+
+          {/* Form */}
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium">Name</label>
+              <label htmlFor="cat-name" className="block text-sm font-medium">
+                Name
+              </label>
               <input
+                id="cat-name"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full border rounded px-2 py-1 mt-1"
+                autoFocus
+                className="mt-1 h-10 w-full rounded border px-3"
+                placeholder="e.g., Family"
               />
             </div>
+
             <div>
-              <label className="block text-sm font-medium">Color</label>
-              <input
-                type="color"
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                className="w-12 h-8 border rounded mt-1"
-              />
+              <label htmlFor="cat-color" className="block text-sm font-medium">
+                Color
+              </label>
+              <div className="mt-1 flex items-center gap-3">
+                <input
+                  id="cat-color"
+                  type="color"
+                  value={color}
+                  onChange={(e) => setColor(e.target.value)}
+                  className="h-10 w-12 rounded border"
+                  aria-label="Pick color"
+                />
+                <span className="text-sm text-gray-600">{color}</span>
+              </div>
             </div>
-            <div className="flex justify-end">
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Dialog.Close asChild>
+                <button className="h-10 rounded bg-gray-100 px-4 text-sm hover:bg-gray-200">
+                  Cancel
+                </button>
+              </Dialog.Close>
               <button
                 onClick={handleSubmit}
-                className="bg-teal text-white px-4 py-2 rounded hover:bg-teal/80"
+                disabled={!canSave}
+                className="h-10 rounded bg-teal px-4 text-sm text-white hover:opacity-90 disabled:opacity-50"
+                style={{ backgroundColor: "#90bede" }}
               >
                 Save
               </button>

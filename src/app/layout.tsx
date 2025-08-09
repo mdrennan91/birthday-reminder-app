@@ -42,6 +42,12 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -49,14 +55,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${cabin.variable}`}>
-      <body className={`font-sans bg-[var(--background)] text-[var(--foreground)]`}>
+      <body className="font-sans bg-[var(--background)] text-[var(--foreground)] min-h-dvh">
         <Providers>
-          <div className="flex flex-col min-h-screen">
+          <div className="flex min-h-dvh flex-col">
             <Header />
             <div className="flex flex-1 overflow-hidden">
-              <Sidebar />
-              <main className="flex-1 flex flex-col">
-                <div className="flex-1 p-6">
+              {/* Sidebar: hidden on mobile, visible on md+ */}
+              <div className="hidden md:block">
+                <Sidebar />
+              </div>
+
+              <main className="flex flex-1 flex-col">
+                <div className="flex-1 p-4 md:p-6">
                   <MainContent />
                   {children}
                 </div>

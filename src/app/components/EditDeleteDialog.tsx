@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
+import { X } from "lucide-react";
 
 interface CategoryType {
   _id: string;
@@ -50,69 +51,99 @@ export default function EditDeleteDialog({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50 z-40" />
+        {/* Backdrop */}
+        <Dialog.Overlay
+          className="
+            fixed inset-0 z-40 bg-black/40
+            data-[state=open]:animate-in data-[state=open]:fade-in-0
+            data-[state=closed]:animate-out data-[state=closed]:fade-out-0
+          "
+        />
+        {/* Content: full-screen on mobile; centered sheet on md+ */}
         <Dialog.Content
-          className="fixed z-50 bg-white p-6 rounded-lg shadow-xl top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-md focus:outline-none"
           aria-describedby="edit-delete-description"
+          className="
+            fixed z-50 bg-white shadow-xl focus:outline-none
+            inset-0 md:inset-auto md:top-1/2 md:left-1/2
+            md:-translate-x-1/2 md:-translate-y-1/2
+            w-full h-dvh md:h-auto md:w-[90vw] md:max-w-md
+            data-[state=open]:animate-in data-[state=open]:zoom-in-95 data-[state=open]:fade-in-0
+            data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=closed]:fade-out-0
+            rounded-none md:rounded-lg
+          "
         >
-          <Dialog.Title className="text-lg font-bold mb-1">
-            Edit or Delete Categories
-          </Dialog.Title>
+          {/* Header (sticky on mobile) */}
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-4 py-3">
+            <Dialog.Title className="text-base font-semibold">
+              Edit or Delete Categories
+            </Dialog.Title>
+            <Dialog.Close asChild>
+              <button
+                aria-label="Close"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border"
+              >
+                <X size={18} />
+              </button>
+            </Dialog.Close>
+          </div>
+          <Dialog.Description className="sr-only">
+             aria-describedby={undefined}
+          </Dialog.Description>
           <Dialog.Description
             id="edit-delete-description"
-            className="text-sm text-gray-500 mb-4"
+            className="px-4 pt-3 text-sm text-gray-500"
           >
             Make changes to your categories or remove them.
           </Dialog.Description>
 
-          <ul className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+          {/* List (scrollable) */}
+          <ul className="max-h-[65dvh] overflow-y-auto px-4 py-3 md:max-h-[60vh]">
             {categories.map((cat) => (
-              <li key={cat._id} className="flex items-center gap-2">
+              <li key={cat._id} className="flex items-center gap-2 py-2">
                 {editingId === cat._id ? (
                   <>
                     <input
                       type="text"
                       value={editedName}
                       onChange={(e) => setEditedName(e.target.value)}
-                      className="border p-1 rounded w-1/2"
+                      className="h-10 w-1/2 rounded border px-3"
                       autoFocus
                     />
                     <input
                       type="color"
                       value={editedColor}
                       onChange={(e) => setEditedColor(e.target.value)}
-                      className="w-10 h-6"
+                      className="h-10 w-12 rounded border"
+                      aria-label="Pick color"
                     />
                     <button
                       onClick={handleSave}
-                      className="text-sm bg-teal-600 text-white px-2 py-1 rounded hover:bg-teal-700"
+                      className="h-10 rounded bg-teal px-3 text-sm text-white hover:opacity-90"
+                      style={{ backgroundColor: "#90bede" }}
                     >
                       Save
                     </button>
                     <button
                       onClick={cancelEdit}
-                      className="text-sm bg-gray-300 px-2 py-1 rounded hover:bg-gray-400"
+                      className="h-10 rounded bg-gray-300 px-3 text-sm hover:bg-gray-400"
                     >
                       Cancel
                     </button>
                   </>
                 ) : (
                   <>
-                    <span
-                      className="flex-1 truncate"
-                      style={{ color: cat.color }}
-                    >
+                    <span className="flex-1 truncate" style={{ color: cat.color }}>
                       {cat.name}
                     </span>
                     <button
                       onClick={() => startEdit(cat)}
-                      className="text-sm bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+                      className="h-10 rounded bg-blue-500 px-3 text-sm text-white hover:bg-blue-600"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => onDelete(cat._id)}
-                      className="text-sm bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                      className="h-10 rounded bg-red-500 px-3 text-sm text-white hover:bg-red-600"
                     >
                       Delete
                     </button>
@@ -120,10 +151,16 @@ export default function EditDeleteDialog({
                 )}
               </li>
             ))}
+            {categories.length === 0 && (
+              <li className="py-6 text-center text-sm text-gray-500">
+                No categories yet.
+              </li>
+            )}
           </ul>
 
-          <div className="mt-6 text-right">
-            <Dialog.Close className="text-sm text-blue-600 hover:underline">
+          {/* Footer (sticky on mobile) */}
+          <div className="sticky bottom-0 z-10 border-t bg-white px-4 py-3 text-right">
+            <Dialog.Close className="h-10 rounded bg-gray-100 px-3 text-sm hover:bg-gray-200">
               Close
             </Dialog.Close>
           </div>

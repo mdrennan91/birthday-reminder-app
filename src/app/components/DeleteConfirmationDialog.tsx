@@ -26,6 +26,9 @@ export default function DeleteConfirmationDialog({
           <Dialog.Title className="text-lg font-semibold text-center mb-2">
             Confirm Deletion
           </Dialog.Title>
+          <Dialog.Description className="sr-only">
+            aria-describedby={undefined}
+          </Dialog.Description>
           <Dialog.Description
             id="delete-confirm-description"
             className="text-sm text-center text-gray-700 mb-4"
