@@ -15,10 +15,30 @@ const cabin = Cabin({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://birthday-reminder-app-iota.vercel.app"),
   title: "CakeMe App",
   description: "Track and celebrate the people you care about",
-  icons: {
-    icon: "/favicon.png",
+  icons: { icon: "/favicon.png" },
+  openGraph: {
+    type: "website",
+    url: "/",
+    siteName: "CakeMe",
+    title: "CakeMe App",
+    description: "Track and celebrate the people you care about",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "CakeMe — Track birthdays with ease",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "CakeMe App",
+    description: "Track and celebrate the people you care about",
+    images: ["/og-image.png"],
   },
 };
 
