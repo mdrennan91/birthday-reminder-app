@@ -42,6 +42,7 @@ export default function MainContent() {
   const [allCategories, setAllCategories] = useState<{ _id: string; name: string; color: string }[]>([]);
   const [allPeople, setAllPeople] = useState<Person[]>([]);
   const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const [searchError, setSearchError] = useState(""); // inline search error
 
   const avatarUrls = useSignedAvatars(people);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -78,10 +79,7 @@ export default function MainContent() {
         setAllCategories(data);
       }
     }
-
-    if (status === "authenticated") {
-      fetchCategories();
-    }
+    if (status === "authenticated") fetchCategories();
   }, [status]);
 
   useEffect(() => {
@@ -91,13 +89,11 @@ export default function MainContent() {
         .then(setAllCategories)
         .catch(console.error);
     };
-
     window.addEventListener("categoryUpdated", handleCategoryUpdate);
     return () => window.removeEventListener("categoryUpdated", handleCategoryUpdate);
   }, []);
 
   const todaySafe = useMemo(() => today ?? dayjs(), [today]);
-
   const peopleWithBirthday = useMemo(() => addBirthdayThisYear(people, todaySafe), [people, todaySafe]);
 
   const upcoming = useMemo(() => {
@@ -110,7 +106,6 @@ export default function MainContent() {
   }, [peopleWithBirthday, today, activeCategory, displayCount]);
 
   const combinedList = useMemo(() => sortPinnedFirst(upcoming), [upcoming]);
-
   const groupedByMonth = useMemo(() => groupByMonth(combinedList), [combinedList]);
 
   const requestDelete = async (): Promise<void> => {
@@ -119,7 +114,6 @@ export default function MainContent() {
 
   const confirmDelete = async () => {
     if (!selectedPerson) return;
-
     setIsDeleting(true);
     try {
       await deleteBirthday(selectedPerson._id);
@@ -135,51 +129,60 @@ export default function MainContent() {
     }
   };
 
-  if (!today) return null; 
-   
+  if (!today) return null;
   if (status === "unauthenticated") return null;
   if (status === "loading") return <div className="p-4 text-center">Loading...</div>;
 
-  // console.log("Display count:", displayCount);
-  // console.log("Upcoming birthdays (pre-pinned sort):", upcoming);
-  // console.log("Combined list (after pinned sort):", combinedList);
-
-  // console.log("Display count:", displayCount);
-  // console.log("Upcoming birthdays (pre-pinned sort):", upcoming);
-  // console.log("Combined list (after pinned sort):", combinedList);
-
   return (
-    <main className="flex flex-1 overflow-hidden">
-      {/* Left Column */}
-      <section className="w-1/2 p-4 border-r border-teal overflow-y-auto bg-white">
-        <div className="flex justify-between items-center mb-4">
+    <main className="flex flex-1 overflow-hidden flex-col lg:flex-row">
+      {/* Left Column (list) */}
+      <section className="w-full lg:w-1/2 p-4 border-r border-teal overflow-y-auto bg-white">
+        <div className="flex flex-wrap gap-3 items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Upcoming Birthdays</h2>
-          <input
-            type="text"
-            placeholder="Search..."
-            className="border p-1 text-sm rounded"
-            onChange={(e) => {
-              const query = e.target.value.toLowerCase();
-              if (timeoutId) clearTimeout(timeoutId);
-              const newTimeout = setTimeout(() => {
-                if (query === "") {
-                  setPeople(allPeople);
-                  return;
-                }
-                const filtered = allPeople.filter((p) => p.name.toLowerCase().includes(query));
-                if (filtered.length > 0) {
-                  setPeople(filtered);
-                } else {
-                  alert("No results found.");
-                  e.target.value = "";
-                  setPeople(allPeople);
-                }
-              }, 1000);
-              setTimeoutId(newTimeout);
-            }}
-          />
+
+          {/* Search input with inline error (preserves original input styles) */}
+          {/* Search input with inline error (no layout shift) */}
+          <div className="inline-flex flex-col">
+            <input
+              type="text"
+              placeholder="Search..."
+              className="border p-1 text-sm rounded"
+              onChange={(e) => {
+                const query = e.target.value.toLowerCase();
+                if (timeoutId) clearTimeout(timeoutId);
+                const newTimeout = setTimeout(() => {
+                  if (query === "") {
+                    setPeople(allPeople);
+                    setSearchError("");
+                    return;
+                  }
+                  const filtered = allPeople.filter((p) =>
+                    p.name.toLowerCase().includes(query)
+                  );
+                  if (filtered.length > 0) {
+                    setPeople(filtered);
+                    setSearchError("");
+                  } else {
+                    setSearchError("No results found.");
+                    setPeople(allPeople);
+                  }
+                }, 1000);
+                setTimeoutId(newTimeout);
+              }}
+            />
+            <span
+              aria-live="polite"
+              className={`mt-1 text-xs h-4 transition-opacity duration-200
+                ${searchError ? "opacity-100 text-red-600" : "opacity-0 text-transparent"}
+              `}
+            >
+              {searchError || "placeholder"}
+            </span>
+          </div>
           <div className="flex items-center gap-2">
-            <label htmlFor="display-count" className="sr-only">Number of birthdays to show</label>
+            <label htmlFor="display-count" className="sr-only">
+              Number of birthdays to show
+            </label>
             <select
               id="display-count"
               className="border p-1 text-sm rounded"
@@ -189,11 +192,14 @@ export default function MainContent() {
                 setDisplayCount(val === "all" ? "all" : Number(val));
               }}
             >
-              {[4, 6, 8, 10].map((n) => <option key={n} value={n}>Show {n}</option>)}
+              {[4, 6, 8, 10].map((n) => (
+                <option key={n} value={n}>
+                  Show {n}
+                </option>
+              ))}
               <option value="all">Show all</option>
             </select>
           </div>
-          {/* Open add birthday modal */}
 
           <button
             onClick={() => {
@@ -214,9 +220,7 @@ export default function MainContent() {
         </div>
 
         {combinedList.length === 0 ? (
-          <div className="text-center text-gray-600 mt-10">
-            No birthdays found in this category.
-          </div>
+          <div className="text-center text-gray-600 mt-10">No birthdays found in this category.</div>
         ) : (
           Object.entries(groupedByMonth).map(([month, peopleInMonth]) => (
             <div key={month} className="mb-6">
@@ -226,9 +230,8 @@ export default function MainContent() {
                   const age = dayjs().diff(dayjs(person.birthday), "year");
                   const daysUntil = person.birthdayThisYear.diff(today, "day");
                   const adjustedDaysUntil = person.birthdayThisYear.isToday() ? 0 : daysUntil + 1;
-                  const daysLabel = adjustedDaysUntil === 0
-                    ? "Today"
-                    : `${adjustedDaysUntil} day${adjustedDaysUntil !== 1 ? "s" : ""}`;
+                  const daysLabel =
+                    adjustedDaysUntil === 0 ? "Today" : `${adjustedDaysUntil} day${adjustedDaysUntil !== 1 ? "s" : ""}`;
 
                   return (
                     <li
@@ -247,10 +250,7 @@ export default function MainContent() {
                               await updatePinnedStatus(person._id, newPinned);
                               await refreshPeople(setPeople);
                             } catch (err) {
-                              console.error(
-                                "Failed to update pinned state:",
-                                err
-                              );
+                              console.error("Failed to update pinned state:", err);
                             }
                           }}
                           aria-label={`Pin ${person.name}`}
@@ -265,23 +265,16 @@ export default function MainContent() {
                         />
                         <div className="text-left">
                           <div className="font-semibold">{person.name}</div>
-                          <div className="text-sm text-gray-600">
-                            Age: {age}
-                          </div>
+                          <div className="text-sm text-gray-600">Age: {age}</div>
                           {(person.categories?.length ?? 0) > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1">
                               {person.categories?.map((catRef) => {
-                                const matching = allCategories.find(
-                                  (c) => c._id === catRef._id
-                                );
+                                const matching = allCategories.find((c) => c._id === catRef._id);
                                 return (
                                   <span
                                     key={catRef._id}
                                     className="px-1.5 py-0.5 rounded text-white text-xs font-medium"
-                                    style={{
-                                      backgroundColor:
-                                        matching?.color || "#888",
-                                    }}
+                                    style={{ backgroundColor: matching?.color || "#888" }}
                                   >
                                     {matching?.name || "Unknown"}
                                   </span>
@@ -292,13 +285,9 @@ export default function MainContent() {
                         </div>
                       </div>
                       <div className="text-center w-[70px] shrink-0">
-                        <div className="text-teal-800 font-semibold">
-                          {person.birthdayThisYear.format("MMM D")}
-                        </div>
+                        <div className="text-teal-800 font-semibold">{person.birthdayThisYear.format("MMM D")}</div>
                       </div>
-                      <div className="text-right text-sm text-gray-700 w-[80px] shrink-0">
-                        {daysLabel}
-                      </div>
+                      <div className="text-right text-sm text-gray-700 w-[80px] shrink-0">{daysLabel}</div>
                     </li>
                   );
                 })}
@@ -307,9 +296,15 @@ export default function MainContent() {
           ))
         )}
       </section>
-      {/* Right Column: Person Details */}
 
-      <section className="w-1/2 max-h-[calc(100vh-200px)] overflow-y-auto p-4 bg-lavender">
+      {/* Right Column (details) */}
+      <section
+        className="
+          w-full lg:w-1/2
+          max-h-[calc(100vh-200px)] overflow-y-auto
+          p-4 bg-lavender
+        "
+      >
         {selectedPerson ? (
           <PersonDetails
             person={selectedPerson}
@@ -323,7 +318,7 @@ export default function MainContent() {
             onClose={() => setSelectedPerson(null)}
           />
         ) : (
-          <div className="flex flex-col items-center justify-start min-h-full pt-10">
+          <div className="hidden lg:flex flex-col items-center justify-start min-h-full pt-10">
             <LazyImage
               src="/empty-state.webp"
               alt="No birthday selected"
@@ -336,7 +331,7 @@ export default function MainContent() {
         )}
       </section>
 
-      {/* Modal for adding or editing birthdays */}
+      {/* Add/Edit modal */}
       <AddBirthdayModal
         show={showAddModal}
         onClose={() => {
@@ -350,7 +345,7 @@ export default function MainContent() {
         onUpdated={(updatedPerson) => setSelectedPerson(updatedPerson)}
       />
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete confirmation */}
       {showDeleteDialog && selectedPerson && (
         <DeleteConfirmationDialog
           open={showDeleteDialog}
@@ -360,12 +355,9 @@ export default function MainContent() {
           isLoading={isDeleting}
         />
       )}
+
       {/* Error Dialog */}
-      <ErrorDialog
-        open={errorOpen}
-        message={errorMessage}
-        onClose={() => setErrorOpen(false)}
-      />
+      <ErrorDialog open={errorOpen} message={errorMessage} onClose={() => setErrorOpen(false)} />
     </main>
   );
 }
