@@ -1,21 +1,25 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [showSignupSuccess, setShowSignupSuccess] = useState(
-    searchParams.get("signup") === "success"
-  );
+  const [showSignupSuccess, setShowSignupSuccess] = useState(false);
+
+  // Read ?signup=success without useSearchParams (avoids Suspense requirement)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    setShowSignupSuccess(params.get("signup") === "success");
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
