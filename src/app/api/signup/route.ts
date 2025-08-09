@@ -8,7 +8,7 @@ export async function POST(req: Request) {
   const { email, username, password } = await req.json();
 
   const client = await clientPromise;
-  const db = client.db("UserManagementSystem");
+  const db = client.db();
 
   const existing = await db.collection("users").findOne({ email });
   if (existing) {
