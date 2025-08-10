@@ -16,8 +16,9 @@ interface CategoryType {
 
 /**
  * SidebarNav
- * - Desktop (md+): inline panel with original visuals
+ * - Desktop (md+): inline panel
  * - Mobile: render inside a header drawer via `inDrawer`
+ * - Accessibility: native list semantics (ul/li + buttons), no ARIA listbox/option
  */
 export default function SidebarNav({ inDrawer = false }: { inDrawer?: boolean }) {
   const { status } = useSession();
@@ -28,7 +29,6 @@ export default function SidebarNav({ inDrawer = false }: { inDrawer?: boolean })
   const [selectedCategory, setSelectedCategory] = useState<CategoryType | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [filtersActive, setFiltersActive] = useState(false);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -38,9 +38,15 @@ export default function SidebarNav({ inDrawer = false }: { inDrawer?: boolean })
     }
   }, [status]);
 
+  // keep activeCategory in sync if someone else broadcasts a filter event
   useEffect(() => {
-    setFiltersActive(activeCategory !== null);
-  }, [activeCategory]);
+    const onFilter = (e: Event) => {
+      const detail = (e as CustomEvent).detail ?? null;
+      setActiveCategory(detail);
+    };
+    window.addEventListener(CATEGORY_FILTER_EVENT, onFilter as EventListener);
+    return () => window.removeEventListener(CATEGORY_FILTER_EVENT, onFilter as EventListener);
+  }, []);
 
   const fetchCategories = async () => {
     const res = await fetch("/api/categories");
@@ -99,6 +105,7 @@ export default function SidebarNav({ inDrawer = false }: { inDrawer?: boolean })
     const res = await fetch(`/api/categories/${id}`, { method: "DELETE" });
     if (res.ok) {
       setCategories((prev) => prev.filter((cat) => cat._id !== id));
+      setActiveCategory((prev) => (prev && !categories.some((c) => c._id === id) ? null : prev));
     }
   };
 
@@ -107,79 +114,85 @@ export default function SidebarNav({ inDrawer = false }: { inDrawer?: boolean })
 
   // Container variants
   const base = "flex flex-col bg-lavender border-r border-teal";
-  const desktop = "hidden md:flex w-64 p-4 h-full min-h-0"; // original look, no sticky/calc height
-  const drawer = "md:hidden w-72 h-dvh p-4"; // used by header drawer
+  const desktop = "hidden md:flex w-64 p-4 h-full min-h-0";
+  const drawer = "md:hidden w-72 h-dvh p-4";
+
+  const filtersActive = activeCategory !== null;
 
   return (
-    <aside
-      className={`${base} ${inDrawer ? drawer : desktop}`}
-      aria-label="Filter categories"
-    >
-      {/* Header controls — original visuals */}
+    <aside className={`${base} ${inDrawer ? drawer : desktop}`} aria-label="Filter categories">
+      {/* Header controls */}
       <div className="flex justify-between items-center mb-4">
-        <div className="font-extrabold text-xl">Filter Categories</div>
+        <h2 className="font-extrabold text-xl" id="filter-categories-heading">
+          Filter Categories
+        </h2>
         <div className="flex gap-2">
           <button
             onClick={openAddModal}
-            aria-label="Add Category"
-            title="Add Category"
-            className="p-1 bg-teal text-white rounded hover:bg-teal/80"
+            aria-label="Add category"
+            className="p-1 bg-teal text-white rounded hover:bg-teal/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-300"
           >
-            <Plus size={18} />
+            <Plus size={18} aria-hidden />
           </button>
           <button
             onClick={openEditDialog}
-            aria-label="Edit Categories"
-            title="Edit Categories"
-            className="p-1 bg-gray-300 text-black rounded hover:bg-gray-400"
+            aria-label="Edit categories"
+            className="p-1 bg-gray-300 text-black rounded hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
           >
-            <Pencil size={18} />
+            <Pencil size={18} aria-hidden />
           </button>
         </div>
       </div>
 
-      {/* Scrollable category list — original visuals */}
+      {/* Category list */}
       <div className="flex-1 overflow-y-auto min-h-0">
-        <ul className="space-y-2" role="listbox" aria-label="Categories">
+        <ul
+          className="space-y-2"
+          aria-labelledby="filter-categories-heading"
+        >
           {categories.map((cat) => {
-            const isActive = activeCategory === cat.name.toLowerCase();
+            const value = cat.name.toLowerCase();
+            const isActive = activeCategory === value;
             return (
               <li key={cat._id}>
                 <button
-                  style={{ color: cat.color }}
-                  role="option"
-                  aria-selected={isActive}
-                  className={`w-full text-left py-1 px-2 rounded font-medium ${
-                    isActive
-                      ? "bg-teal/20 border-l-4 border-teal"
-                      : "bg-lavender hover:bg-teal/50"
-                  }`}
+                  type="button"
+                  aria-pressed={isActive}
+                  aria-label={`Filter by ${cat.name}`}
+                  data-active={isActive}
+                  className={`w-full text-left py-1.5 px-2 rounded font-medium border transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-200
+                    bg-lavender hover:bg-white/60 border-transparent
+                    data-[active=true]:bg-white data-[active=true]:border-blue-400 data-[active=true]:ring-1 data-[active=true]:ring-blue-200`}
                   onClick={() => {
-                    const value = cat.name.toLowerCase();
                     setActiveCategory(value);
                     const event = new CustomEvent(CATEGORY_FILTER_EVENT, { detail: value });
                     window.dispatchEvent(event);
-                    setFiltersActive(true);
                   }}
                 >
-                  {cat.name}
+                  <span className="inline-flex items-center gap-2">
+                    <span
+                      className="inline-block h-2.5 w-2.5 rounded-full ring-2 ring-white"
+                      style={{ backgroundColor: cat.color }}
+                      aria-hidden
+                    />
+                    <span className="text-gray-900">{cat.name}</span>
+                  </span>
                 </button>
               </li>
             );
           })}
         </ul>
 
-        {/* Sticky Clear Filter — original visuals */}
+        {/* Sticky Clear Filter */}
         <div className="sticky bottom-0 bg-lavender pt-3 pb-4 mt-2 border-t border-gray-300">
           <button
-            className={`w-full text-left py-1 px-2 rounded font-medium ${
-              filtersActive
-                ? "bg-lavender hover:bg-teal/50"
-                : "bg-teal/20 border-l-4 border-teal"
-            }`}
+            type="button"
+            className={`w-full text-left py-1.5 px-2 rounded font-medium border transition focus:outline-none focus:ring-2 focus:ring-offset-2
+              ${filtersActive
+                ? "bg-white border-blue-400 ring-1 ring-blue-200 focus:ring-blue-200"
+                : "bg-lavender hover:bg-white/60 border-transparent focus:ring-blue-200"}`}
             onClick={() => {
               setActiveCategory(null);
-              setFiltersActive(false);
               const event = new CustomEvent(CATEGORY_FILTER_EVENT, { detail: null });
               window.dispatchEvent(event);
             }}

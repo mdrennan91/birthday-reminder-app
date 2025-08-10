@@ -21,6 +21,8 @@ import { useSignedAvatars } from "@/lib/helper/useSignedAvatars";
 import PersonDetails from "./PersonDetails";
 import DeleteConfirmationDialog from "./DeleteConfirmationDialog";
 import ErrorDialog from "./ErrorDialog";
+import { Search, ChevronDown } from "lucide-react";
+
 
 dayjs.extend(isToday);
 
@@ -136,87 +138,84 @@ export default function MainContent() {
   return (
     <main className="flex flex-1 overflow-hidden flex-col lg:flex-row">
       {/* Left Column (list) */}
-      <section className="w-full lg:w-1/2 p-4 border-r border-teal overflow-y-auto bg-white">
-        <div className="flex flex-wrap gap-3 items-center justify-between mb-4">
+      <section
+        className={`w-full lg:w-1/2 p-4 border-r border-teal overflow-y-auto bg-white
+          ${selectedPerson ? "hidden lg:block" : "block"}`}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <h2 className="text-lg font-semibold">Upcoming Birthdays</h2>
 
-          {/* Search input with inline error (preserves original input styles) */}
-          {/* Search input with inline error (no layout shift) */}
-          <div className="inline-flex flex-col">
-            <input
-              type="text"
-              placeholder="Search..."
-              className="border p-1 text-sm rounded"
-              onChange={(e) => {
-                const query = e.target.value.toLowerCase();
-                if (timeoutId) clearTimeout(timeoutId);
-                const newTimeout = setTimeout(() => {
-                  if (query === "") {
-                    setPeople(allPeople);
-                    setSearchError("");
-                    return;
-                  }
-                  const filtered = allPeople.filter((p) =>
-                    p.name.toLowerCase().includes(query)
-                  );
-                  if (filtered.length > 0) {
-                    setPeople(filtered);
-                    setSearchError("");
-                  } else {
-                    setSearchError("No results found.");
-                    setPeople(allPeople);
-                  }
-                }, 1000);
-                setTimeoutId(newTimeout);
-              }}
-            />
-            <span
-              aria-live="polite"
-              className={`mt-1 text-xs h-4 transition-opacity duration-200
-                ${searchError ? "opacity-100 text-red-600" : "opacity-0 text-transparent"}
-              `}
-            >
-              {searchError || "placeholder"}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <label htmlFor="display-count" className="sr-only">
-              Number of birthdays to show
-            </label>
-            <select
-              id="display-count"
-              className="border p-1 text-sm rounded"
-              value={displayCount}
-              onChange={(e) => {
-                const val = e.target.value;
-                setDisplayCount(val === "all" ? "all" : Number(val));
-              }}
-            >
-              {[4, 6, 8, 10].map((n) => (
-                <option key={n} value={n}>
-                  Show {n}
-                </option>
-              ))}
-              <option value="all">Show all</option>
-            </select>
-          </div>
+          <div className="flex items-center gap-3 ml-auto">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search..."
+                className="h-9 w-56 pl-9 pr-3 rounded-md border border-gray-300 bg-white shadow-sm
+                          text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400"
+                onChange={(e) => {
+                  const query = e.target.value.toLowerCase();
+                  if (timeoutId) clearTimeout(timeoutId);
+                  const newTimeout = setTimeout(() => {
+                    if (query === "") {
+                      setPeople(allPeople);
+                      setSearchError("");
+                      return;
+                    }
+                    const filtered = allPeople.filter((p) => p.name.toLowerCase().includes(query));
+                    if (filtered.length > 0) {
+                      setPeople(filtered);
+                      setSearchError("");
+                    } else {
+                      setSearchError("No results found.");
+                      setPeople(allPeople);
+                    }
+                  }, 1000);
+                  setTimeoutId(newTimeout);
+                }}
+              />
+              <span
+                aria-live="polite"
+                className={`absolute -bottom-5 left-0 text-xs transition-opacity duration-200
+                  ${searchError ? "opacity-100 text-red-600" : "opacity-0 text-transparent"}`}
+              >
+                {searchError || "placeholder"}
+              </span>
+            </div>
 
-          <button
-            onClick={() => {
-              setIsEditing(false);
-              setSelectedPerson(null);
-              setShowAddForm(true);
-            }}
-            className="px-3 py-1 text-sm rounded border"
-            style={{
-              backgroundColor: "#2F6F9F",
-              color: "#ffffff",
-              zIndex: 10,
-              position: "relative",
-            }}
-          >
-            + Add Birthday
-          </button>
+            {/* Show N dropdown */}
+            <div className="relative">
+              <label htmlFor="display-count" className="sr-only">Number to show</label>
+              <select
+                id="display-count"
+                className="h-9 appearance-none pl-3 pr-8 rounded-md border border-gray-300 bg-white shadow-sm
+                          text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400"
+                value={displayCount}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setDisplayCount(val === "all" ? "all" : Number(val));
+                }}
+              >
+                {[4, 6, 8, 10].map((n) => (
+                  <option key={n} value={n}>Show {n}</option>
+                ))}
+                <option value="all">Show all</option>
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+            </div>
+
+            {/* Add button (unchanged) */}
+            <button
+              onClick={() => { setIsEditing(false); setSelectedPerson(null); setShowAddForm(true); }}
+              className="inline-flex items-center justify-center h-9 px-3 text-sm font-medium rounded-md
+                        bg-[#2F6F9F] text-white hover:bg-[#265a80] transition focus:outline-none
+                        focus:ring-2 focus:ring-offset-2 focus:ring-blue-300 whitespace-nowrap"
+            >
+              <span className="sm:hidden">+ Add</span>
+              <span className="hidden sm:inline">+ Add Birthday</span>
+            </button>
+          </div>
         </div>
 
         {combinedList.length === 0 ? (
@@ -299,11 +298,8 @@ export default function MainContent() {
 
       {/* Right Column (details) */}
       <section
-        className="
-          w-full lg:w-1/2
-          max-h-[calc(100vh-200px)] overflow-y-auto
-          p-4 bg-lavender
-        "
+        className={`w-full lg:w-1/2 max-h-[calc(100vh-200px)] overflow-y-auto p-4 bg-lavender
+          ${selectedPerson ? "block" : "hidden lg:block"}`}
       >
         {selectedPerson ? (
           <PersonDetails
