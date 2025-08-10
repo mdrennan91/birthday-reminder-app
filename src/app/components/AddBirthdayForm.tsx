@@ -61,7 +61,7 @@ export default function AddBirthdayForm({
     setFormData({
       name: personToEdit.name ?? "",
       day: birthday.date().toString(),
-      month: (birthday.month() + 1).toString(), // 0-based in dayjs
+      month: (birthday.month() + 1).toString(),
       year: birthday.year().toString(),
       phone: personToEdit.phone ?? "",
       email: personToEdit.email ?? "",
@@ -70,29 +70,25 @@ export default function AddBirthdayForm({
       avatarUrl: personToEdit.avatarUrl ?? "",
     });
 
-    setSelectedCategoryIds(personToEdit.categories?.map((cat) => cat._id) ?? []);
+    setSelectedCategoryIds(personToEdit.categories?.map((c) => c._id) ?? []);
   }, [personToEdit]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const validate = () => {
     const newErrors: typeof errors = {};
     const currentYear = new Date().getFullYear();
 
-    if (!formData.name.trim()) newErrors.name = "Name is required";
-
     const month = +formData.month;
     const day = +formData.day;
     const year = +formData.year;
 
+    if (!formData.name.trim()) newErrors.name = "Name is required";
     if (!month || month < 1 || month > 12) newErrors.month = "Invalid month";
     if (!day || day < 1 || day > 31) newErrors.day = "Invalid day";
     if (!year || year < currentYear - 150 || year > currentYear)
@@ -101,7 +97,8 @@ export default function AddBirthdayForm({
     if (formData.email && !/^[\w.%+-]+@[\w.-]+\.\w{2,}$/.test(formData.email))
       newErrors.email = "Invalid email format";
 
-    if (formData.phone && !/^\d{7,15}$/.test(formData.phone.replace(/[^\d]/g, "")))
+    const digitsOnly = formData.phone.replace(/[^\d]/g, "");
+    if (formData.phone && !/^\d{7,15}$/.test(digitsOnly))
       newErrors.phone = "Invalid phone number";
 
     return newErrors;
@@ -114,7 +111,10 @@ export default function AddBirthdayForm({
       return;
     }
 
-    const birthday = `${formData.year.trim()}-${formData.month.padStart(2, "0")}-${formData.day.padStart(2, "0")}`;
+    const birthday = `${formData.year.trim()}-${formData.month.padStart(
+      2,
+      "0"
+    )}-${formData.day.padStart(2, "0")}`;
 
     const payload = {
       ...formData,
@@ -123,60 +123,76 @@ export default function AddBirthdayForm({
     };
 
     try {
-        const res = await fetch(
-          personToEdit ? `/api/birthdays/${personToEdit._id}` : "/api/birthdays",
-          {
-            method: personToEdit ? "PUT" : "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          }
-        );
-        if (!res.ok) throw new Error("Failed to save birthday");
-
-        const data = await res.json();             // <-- contains _id
-        await refreshPeople();
-        onUpdated?.(data);
-
-        if (mode === "upload") {
-          setPersonIdForUpload(data._id);          // <-- critical
-          setShowUploadPrompt(true);               // open avatar dialog
-        } else {
-          setShowUploadPrompt(false);              // no upload
-          setPersonIdForUpload(null);
-          onClose();                               // just exit
+      const res = await fetch(
+        personToEdit ? `/api/birthdays/${personToEdit._id}` : "/api/birthdays",
+        {
+          method: personToEdit ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
         }
-      } catch (err) {
-        console.error("Error submitting form:", err);
+      );
+
+      if (!res.ok) throw new Error("Failed to save birthday");
+
+      const data = await res.json(); // contains _id
+      await refreshPeople();
+      onUpdated?.(data);
+
+      if (mode === "upload") {
+        setPersonIdForUpload(data._id);
+        setShowUploadPrompt(true);
+      } else {
+        setShowUploadPrompt(false);
+        setPersonIdForUpload(null);
+        onClose();
       }
-    };
+    } catch (err) {
+      console.error("Error submitting form:", err);
+    }
+  };
+
+  const inputCls =
+    "w-full h-11 rounded-lg border border-gray-300 px-3 placeholder:text-gray-400 text-gray-900 " +
+    "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition";
+  const errorCls = "text-xs text-red-600 mt-1";
 
   return (
-    <form ref={formRef} className="space-y-4">
-      {/* Inputs */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <form ref={formRef} className="space-y-6">
+      {/* Fields */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Name */}
         <div>
+          <label htmlFor="name" className="sr-only">
+            Name
+          </label>
           <input
-            type="text"
+            id="name"
             name="name"
+            type="text"
             placeholder="Name *"
             value={formData.name}
             onChange={handleChange}
+            className={inputCls}
             autoComplete="name"
-            className="h-11 w-full rounded border px-3"
             required
+            aria-invalid={!!errors.name}
           />
-          {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
+          {errors.name && <p className={errorCls}>{errors.name}</p>}
         </div>
 
         {/* Month */}
         <div>
+          <label htmlFor="month" className="sr-only">
+            Month
+          </label>
           <select
+            id="month"
             name="month"
             value={formData.month}
             onChange={handleChange}
+            className={inputCls}
             required
-            className="h-11 w-full rounded border px-3"
+            aria-invalid={!!errors.month}
           >
             <option value="">Month *</option>
             {Array.from({ length: 12 }, (_, i) => (
@@ -185,150 +201,193 @@ export default function AddBirthdayForm({
               </option>
             ))}
           </select>
-          {errors.month && <p className="mt-1 text-sm text-red-500">{errors.month}</p>}
+          {errors.month && <p className={errorCls}>{errors.month}</p>}
         </div>
 
         {/* Day */}
         <div>
+          <label htmlFor="day" className="sr-only">
+            Day
+          </label>
           <input
-            type="number"
+            id="day"
             name="day"
+            type="number"
             placeholder="Day *"
             value={formData.day}
             onChange={handleChange}
+            className={inputCls}
             inputMode="numeric"
             min={1}
             max={31}
-            className="h-11 w-full rounded border px-3"
             required
+            aria-invalid={!!errors.day}
           />
-          {errors.day && <p className="mt-1 text-sm text-red-500">{errors.day}</p>}
+          {errors.day && <p className={errorCls}>{errors.day}</p>}
         </div>
 
         {/* Year */}
         <div>
+          <label htmlFor="year" className="sr-only">
+            Year
+          </label>
           <input
-            type="number"
+            id="year"
             name="year"
+            type="number"
             placeholder="Year *"
             value={formData.year}
             onChange={handleChange}
+            className={inputCls}
             inputMode="numeric"
-            className="h-11 w-full rounded border px-3"
+            min={1875}
+            max={new Date().getFullYear()}
             required
+            aria-invalid={!!errors.year}
           />
-          {errors.year && <p className="mt-1 text-sm text-red-500">{errors.year}</p>}
+          {errors.year && <p className={errorCls}>{errors.year}</p>}
         </div>
 
         {/* Phone */}
         <div>
+          <label htmlFor="phone" className="sr-only">
+            Phone
+          </label>
           <input
-            type="tel"
+            id="phone"
             name="phone"
+            type="tel"
             placeholder="Phone"
             value={formData.phone}
             onChange={handleChange}
+            className={inputCls}
             autoComplete="tel"
             inputMode="tel"
-            className="h-11 w-full rounded border px-3"
+            aria-invalid={!!errors.phone}
           />
-          {errors.phone && <p className="mt-1 text-sm text-red-500">{errors.phone}</p>}
+          {errors.phone && <p className={errorCls}>{errors.phone}</p>}
         </div>
 
         {/* Email */}
         <div>
+          <label htmlFor="email" className="sr-only">
+            Email
+          </label>
           <input
-            type="email"
+            id="email"
             name="email"
+            type="email"
             placeholder="Email"
             value={formData.email}
             onChange={handleChange}
+            className={inputCls}
             autoComplete="email"
-            className="h-11 w-full rounded border px-3"
+            inputMode="email"
+            autoCapitalize="none"
+            aria-invalid={!!errors.email}
           />
-          {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email}</p>}
+          {errors.email && <p className={errorCls}>{errors.email}</p>}
         </div>
 
         {/* Address */}
         <div className="md:col-span-2">
+          <label htmlFor="address" className="sr-only">
+            Address
+          </label>
           <input
-            type="text"
+            id="address"
             name="address"
+            type="text"
             placeholder="Address"
             value={formData.address}
             onChange={handleChange}
+            className={inputCls}
             autoComplete="street-address"
-            className="h-11 w-full rounded border px-3"
           />
         </div>
 
         {/* Notes */}
         <div className="md:col-span-2">
+          <label htmlFor="notes" className="sr-only">
+            Notes
+          </label>
           <textarea
+            id="notes"
             name="notes"
             placeholder="Notes"
             value={formData.notes}
             onChange={handleChange}
-            className="min-h-[96px] w-full rounded border p-3"
+            className={`${inputCls} h-24 py-2`}
           />
         </div>
+      </div>
 
-        {/* Categories */}
-        <div className="md:col-span-2">
-          <label className="mb-2 block font-medium">Categories</label>
-          <div className="flex flex-wrap gap-2">
-            {availableCategories.map((cat) => (
+      {/* Categories (chip style with colored dots, readable text) */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Categories
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {availableCategories.map((cat) => {
+            const checked = selectedCategoryIds.includes(cat._id);
+            return (
               <label
                 key={cat._id}
-                className="inline-flex cursor-pointer items-center gap-2 rounded-lg border px-2 py-1"
-                title={cat.name}
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm cursor-pointer select-none transition
+                  ${
+                    checked
+                      ? "bg-white border-blue-400 ring-1 ring-blue-200"
+                      : "bg-white border-gray-300 hover:bg-gray-50"
+                  }`}
               >
                 <input
                   type="checkbox"
-                  checked={selectedCategoryIds.includes(cat._id)}
+                  className="accent-blue-600"
+                  checked={checked}
                   onChange={(e) => {
                     setSelectedCategoryIds((prev) =>
-                      e.target.checked ? [...prev, cat._id] : prev.filter((id) => id !== cat._id)
+                      e.target.checked
+                        ? [...prev, cat._id]
+                        : prev.filter((id) => id !== cat._id)
                     );
                   }}
                 />
-                <span className="text-sm font-medium" style={{ color: cat.color }}>
-                  {cat.name}
+                <span className="inline-flex items-center gap-2">
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-full ring-2 ring-white"
+                    style={{ backgroundColor: cat.color }}
+                    aria-hidden
+                  />
+                  <span className="text-gray-800">{cat.name}</span>
                 </span>
               </label>
-            ))}
-          </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Footer Buttons */}
-      <div className="flex flex-col-reverse gap-2 pt-2 md:flex-row md:justify-end">
-        <button
-          type="button"
-          onClick={onClose}
-          className="h-11 rounded bg-gray-600 px-4 text-sm text-white hover:bg-gray-700"
-        >
-          Cancel
-        </button>
+      {/* Footer – centered buttons, no Cancel (the X lives in the modal header) */}
+      <div className="mt-6 border-t border-gray-200 pt-4">
+        <div className="flex flex-col-reverse sm:flex-row justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => handleSubmit("exit")}
+            className="h-11 px-4 rounded-lg border border-blue-300 text-blue-700 bg-white hover:bg-blue-50 active:scale-[.99] transition whitespace-nowrap inline-flex items-center justify-center"
+          >
+            {isEditMode ? "Update and Exit" : "Save and Exit"}
+          </button>
 
-        <button
-          type="button"
-          onClick={() => handleSubmit("exit")}
-          className="h-11 rounded bg-blue-600 px-4 text-sm text-white hover:bg-blue-700"
-        >
-          {isEditMode ? "Update and Exit" : "Save and Exit"}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleSubmit("upload")}
-          className="h-11 rounded bg-blue-600 px-4 text-sm text-white hover:bg-blue-700"
-        >
-          {isEditMode ? "Update ➜ Upload Avatar" : "Save ➜ Upload Avatar"}
-        </button>
+          <button
+            type="button"
+            onClick={() => handleSubmit("upload")}
+            className="h-11 px-4 rounded-lg bg-blue-600 text-white shadow hover:bg-blue-700 active:scale-[.99] transition whitespace-nowrap inline-flex items-center justify-center"
+          >
+            {isEditMode ? "Update → Upload Avatar" : "Save → Upload Avatar"}
+          </button>
+        </div>
       </div>
 
-      {/* Avatar Upload Dialog */}
+      {/* Avatar Upload Dialog (kept here to match your teammate’s behavior) */}
       {showUploadPrompt && personIdForUpload && (
         <AvatarUploadDialog
           personId={personIdForUpload}
@@ -336,7 +395,7 @@ export default function AddBirthdayForm({
             setShowUploadPrompt(false);
             await refreshPeople();
             setPersonIdForUpload(null);
-            onClose(); // close after successful upload
+            onClose();
           }}
         />
       )}
