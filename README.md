@@ -2,8 +2,7 @@
 
 A web app to track important birthdays and send customizable notifications, built with Next.js, TypeScript, Tailwind CSS, and MongoDB.
 
-View our live live application at [https://birthday-reminder-app.vercel.app/](https://birthday-reminder-app.vercel.app/)
-
+View our live live application at [https://birthday-reminder-app-iota.vercel.app/](https://birthday-reminder-app-iota.vercel.app/)
 ## Features
 
 - Add, edit, and delete birthdays
